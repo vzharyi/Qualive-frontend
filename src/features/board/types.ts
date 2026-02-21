@@ -24,6 +24,7 @@ export interface Task {
         completed: number
         total: number
     }
+    codeRating?: number
 }
 
 export interface Column {

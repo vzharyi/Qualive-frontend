@@ -1,6 +1,7 @@
 import type React from "react"
 
 import { useState, useRef, useEffect } from "react"
+import { Reorder, useDragControls } from "framer-motion"
 import { TaskCard } from "@/features/board/components/task-card"
 import {
   DropdownMenu,
@@ -11,6 +12,7 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { MoreHorizontal, Plus, Pencil, Trash2, ArrowLeft, ArrowRight, Palette } from "lucide-react"
 import type { Column, Task } from "@/features/board/types"
+import { cn } from "@/lib/utils"
 
 interface KanbanColumnProps {
   column: Column
@@ -32,10 +34,18 @@ const columnColors: Record<string, string> = {
   cyan: "34, 211, 238",
 }
 
-export function KanbanColumn({ column, onDragStart, onDragEnd, onDrop, isDraggingBoard, draggedTask }: KanbanColumnProps) {
+export function KanbanColumn({
+  column,
+  onDragStart,
+  onDragEnd,
+  onDrop,
+  isDraggingBoard,
+  draggedTask,
+}: KanbanColumnProps) {
   const [isOver, setIsOver] = useState(false)
   const dragCounter = useRef(0)
   const colorRGB = columnColors[column.color] || columnColors.slate
+  const dragControls = useDragControls()
 
   // Guaranteed cleanup: when the board stops dragging entirely, reset our local hover state.
   useEffect(() => {
@@ -71,8 +81,18 @@ export function KanbanColumn({ column, onDragStart, onDragEnd, onDrop, isDraggin
   }
 
   return (
-    <div
-      className="flex h-fit w-[300px] flex-shrink-0 flex-col rounded-xl transition-all"
+    <Reorder.Item
+      value={column}
+      dragListener={false}
+      dragControls={dragControls}
+      layout="position"
+      axis="x"
+      transition={{ type: "spring", stiffness: 300, damping: 30 }}
+      className={cn(
+        "flex h-fit w-[300px] flex-shrink-0 flex-col rounded-xl relative bg-[#070710]",
+        // Prevent content from triggering HTML drag instead of pointer drag
+        "select-none"
+      )}
       style={{
         backgroundColor: isOver ? `rgba(${colorRGB}, 0.01)` : "transparent",
         outline: isOver ? `1.5px dashed rgba(${colorRGB}, 0.4)` : "1.5px solid transparent",
@@ -84,7 +104,13 @@ export function KanbanColumn({ column, onDragStart, onDragEnd, onDrop, isDraggin
       onDrop={handleDrop}
     >
       {/* Column header */}
-      <div className="flex items-center justify-between mb-3 px-1">
+      <div
+        className="flex items-center justify-between mb-3 px-1 cursor-grab active:cursor-grabbing touch-none"
+        onPointerDown={(e) => {
+          e.preventDefault() // Prevents text selection while dragging
+          dragControls.start(e)
+        }}
+      >
         <div
           className="flex items-center gap-2 rounded-full px-3 py-1.5 text-[13px] font-medium"
           style={{ backgroundColor: `rgba(${colorRGB}, 0.12)`, color: `rgb(${colorRGB})` }}
@@ -161,6 +187,6 @@ export function KanbanColumn({ column, onDragStart, onDragEnd, onDrop, isDraggin
           New task
         </button>
       </div>
-    </div>
+    </Reorder.Item>
   )
 }

@@ -214,8 +214,8 @@ export function TaskCard({ task, colorRGB, columnId, onDragStart, onDragEnd, onD
       )}
 
       {/* Bottom row with meta info */}
-      {(task.dueDate || task.attachments > 0 || task.checklist || task.comments > 0) && (
-        <div className="mt-3 flex items-center justify-between text-[11px] text-zinc-600">
+      {(task.dueDate || task.attachments > 0 || task.checklist || task.comments > 0 || task.codeRating !== undefined) && (
+        <div className="mt-3 flex h-6 w-full items-center justify-between text-[11px] text-zinc-600">
           <div className="flex items-center gap-3">
             {/* Due date */}
             {task.dueDate && (
@@ -257,11 +257,54 @@ export function TaskCard({ task, colorRGB, columnId, onDragStart, onDragEnd, onD
             )}
           </div>
 
-          {/* Priority indicator */}
-          <div
-            className={cn("h-2 w-2 rounded-full", getPriorityColor(task.priority))}
-            title={`Priority: ${task.priority}`}
-          />
+          <div className="flex items-center gap-2.5">
+            {/* Code Rating */}
+            {task.codeRating !== undefined && (
+              <div
+                className="relative flex h-6 w-6 items-center justify-center"
+                title={`Code Rating: ${task.codeRating}`}
+              >
+                <svg className="absolute inset-0 h-full w-full -rotate-90">
+                  <circle
+                    cx="12"
+                    cy="12"
+                    r="10"
+                    className="fill-none stroke-white/10"
+                    strokeWidth="2"
+                  />
+                  <circle
+                    cx="12"
+                    cy="12"
+                    r="10"
+                    className={cn(
+                      "fill-none transition-all duration-1000 ease-out",
+                      task.codeRating >= 90 ? "stroke-emerald-500 drop-shadow-[0_0_3px_rgba(16,185,129,0.5)]" :
+                        task.codeRating >= 70 ? "stroke-amber-500 drop-shadow-[0_0_3px_rgba(245,158,11,0.5)]" :
+                          "stroke-red-500 drop-shadow-[0_0_3px_rgba(239,68,68,0.5)]"
+                    )}
+                    strokeWidth="2"
+                    strokeDasharray="62.8"
+                    strokeDashoffset={62.8 - (62.8 * task.codeRating) / 100}
+                    strokeLinecap="round"
+                  />
+                </svg>
+                <span className={cn(
+                  "z-10 text-[8px] font-bold",
+                  task.codeRating >= 90 ? "text-emerald-400" :
+                    task.codeRating >= 70 ? "text-amber-400" :
+                      "text-red-400"
+                )}>
+                  {task.codeRating}
+                </span>
+              </div>
+            )}
+
+            {/* Priority indicator */}
+            <div
+              className={cn("h-2 w-2 rounded-full", getPriorityColor(task.priority))}
+              title={`Priority: ${task.priority}`}
+            />
+          </div>
         </div>
       )}
     </div>

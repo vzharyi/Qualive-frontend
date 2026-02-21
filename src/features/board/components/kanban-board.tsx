@@ -1,5 +1,6 @@
 import { useState } from "react"
 import { KanbanColumn } from "@/features/board/components/kanban-column"
+import { Reorder } from "framer-motion"
 import { Plus } from "lucide-react"
 import type { Column, Task } from "@/features/board/types"
 
@@ -24,6 +25,7 @@ const initialColumns: Column[] = [
         attachments: 3,
         comments: 5,
         checklist: { completed: 2, total: 5 },
+        codeRating: 92,
       },
       {
         id: "TASK-102",
@@ -55,6 +57,7 @@ const initialColumns: Column[] = [
         attachments: 2,
         comments: 8,
         checklist: { completed: 4, total: 6 },
+        codeRating: 65,
       },
       {
         id: "TASK-104",
@@ -93,6 +96,7 @@ const initialColumns: Column[] = [
         priority: "high",
         attachments: 0,
         comments: 12,
+        codeRating: 84,
       },
     ],
   },
@@ -129,6 +133,8 @@ const initialColumns: Column[] = [
 
 export function KanbanBoard() {
   const [columns, setColumns] = useState<Column[]>(initialColumns)
+
+  // Task Drag State
   const [draggedTask, setDraggedTask] = useState<Task | null>(null)
   const [sourceColumnId, setSourceColumnId] = useState<string | null>(null)
 
@@ -191,7 +197,12 @@ export function KanbanBoard() {
   }
 
   return (
-    <div className="flex h-full items-start gap-4 overflow-x-auto p-4">
+    <Reorder.Group
+      axis="x"
+      values={columns}
+      onReorder={setColumns}
+      className="flex h-full items-start gap-4 overflow-x-auto p-4"
+    >
       {columns.map((column) => (
         <KanbanColumn
           key={column.id}
@@ -211,6 +222,6 @@ export function KanbanBoard() {
           Add Column
         </button>
       </div>
-    </div>
+    </Reorder.Group>
   )
 }
