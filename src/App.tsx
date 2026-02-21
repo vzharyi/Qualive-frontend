@@ -1,7 +1,7 @@
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom"
 import MainLayout from "@/layouts/main-layout"
 import BoardPage from "@/pages/board-page"
-import LoginPage from "@/pages/login-page"
+import AuthPage from "@/pages/auth-page"
 import LandingPage from "@/pages/landing-page"
 
 function App() {
@@ -9,7 +9,8 @@ function App() {
     <Router>
       <Routes>
         <Route path="/landing" element={<LandingPage />} />
-        <Route path="/login" element={<LoginPage />} />
+        <Route path="/login" element={<AuthPage />} />
+        <Route path="/register" element={<AuthPage />} />
         <Route
           path="/*"
           element={

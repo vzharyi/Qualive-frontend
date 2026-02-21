@@ -1,8 +1,7 @@
 import { useState } from "react"
 import { cn } from "@/lib/utils"
-import { Button } from "@/components/ui/button"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import { PanelLeftClose, Plus, Star, Folder, Settings, HelpCircle, LayoutDashboard, ChevronDown } from "lucide-react"
+import { PanelLeftClose, Plus, Star, Folder, Settings, HelpCircle, ChevronDown } from "lucide-react"
 
 const workspaces = [
   {
@@ -53,45 +52,43 @@ export function AppSidebar({ isOpen, onToggle }: AppSidebarProps) {
   const SidebarContent = ({ inHoverPanel = false }: { inHoverPanel?: boolean }) => (
     <>
       {/* Logo */}
-      <div className="flex h-14 items-center justify-between border-b border-sidebar-border px-4">
-        <div className="flex items-center gap-2">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary">
-            <LayoutDashboard className="h-4 w-4 text-primary-foreground" />
+      <div className="flex h-14 items-center justify-between border-b border-white/[0.06] px-4">
+        <div className="flex items-center gap-2.5">
+          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-emerald-400 to-emerald-600 text-black font-bold text-xs">
+            Q
           </div>
-          <span className="font-semibold text-sidebar-foreground">TaskFlow</span>
+          <span className="font-semibold text-white text-[15px] tracking-tight">Qualive</span>
         </div>
         {!inHoverPanel && (
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-7 w-7 text-muted-foreground hover:text-foreground"
+          <button
             onClick={onToggle}
+            className="flex h-7 w-7 items-center justify-center rounded-md text-zinc-500 hover:text-zinc-300 hover:bg-white/[0.04] transition-colors cursor-pointer"
           >
             <PanelLeftClose className="h-4 w-4" />
-          </Button>
+          </button>
         )}
       </div>
 
       {/* Create button */}
-      <div className="p-3">
-        <Button className="w-full justify-start gap-2" variant="default">
+      <div className="p-3 mb-2">
+        <button className="w-full flex items-center justify-start gap-2 h-9 px-3 rounded-lg bg-white/[0.04] text-zinc-300 text-[13px] font-medium hover:bg-white/[0.08] hover:text-white transition-all cursor-pointer">
           <Plus className="h-4 w-4" />
-          <span>Create</span>
-        </Button>
+          <span>New task</span>
+        </button>
       </div>
 
       <ScrollArea className="flex-1 px-3">
         {/* Favorites */}
-        <div className="mb-4">
-          <div className="mb-2 flex items-center gap-2 px-2 text-xs font-medium uppercase tracking-wider text-muted-foreground">
+        <div className="mb-5">
+          <div className="mb-2 flex items-center gap-2 px-2 text-[10px] font-medium uppercase tracking-[0.08em] text-zinc-600">
             <Star className="h-3 w-3" />
             <span>Favorites</span>
           </div>
-          <div className="space-y-1">
+          <div className="space-y-0.5">
             {favorites.map((item) => (
               <button
                 key={item.id}
-                className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-sm text-sidebar-foreground hover:bg-sidebar-accent"
+                className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-[13px] text-zinc-400 hover:bg-white/[0.04] hover:text-zinc-200 transition-colors cursor-pointer"
               >
                 <span>{item.emoji}</span>
                 <span className="truncate">{item.name}</span>
@@ -101,8 +98,8 @@ export function AppSidebar({ isOpen, onToggle }: AppSidebarProps) {
         </div>
 
         {/* Workspaces */}
-        <div className="space-y-2">
-          <div className="flex items-center gap-2 px-2 text-xs font-medium uppercase tracking-wider text-muted-foreground">
+        <div className="space-y-1">
+          <div className="flex items-center gap-2 px-2 text-[10px] font-medium uppercase tracking-[0.08em] text-zinc-600 mb-2">
             <Folder className="h-3 w-3" />
             <span>Workspaces</span>
           </div>
@@ -110,22 +107,22 @@ export function AppSidebar({ isOpen, onToggle }: AppSidebarProps) {
             <div key={workspace.id}>
               <button
                 onClick={() => toggleWorkspace(workspace.id)}
-                className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-sm font-medium text-sidebar-foreground hover:bg-sidebar-accent"
+                className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-[13px] font-medium text-zinc-300 hover:bg-white/[0.04] transition-colors cursor-pointer"
               >
                 <ChevronDown
                   className={cn(
-                    "h-4 w-4 transition-transform",
+                    "h-3.5 w-3.5 text-zinc-600 transition-transform duration-200",
                     !expandedWorkspaces.includes(workspace.id) && "-rotate-90",
                   )}
                 />
                 <span className="truncate">{workspace.name}</span>
               </button>
               {expandedWorkspaces.includes(workspace.id) && (
-                <div className="ml-4 mt-1 space-y-1 border-l border-sidebar-border pl-2">
+                <div className="ml-4 mt-0.5 space-y-0.5 border-l border-white/[0.06] pl-2.5">
                   {workspace.boards.map((board) => (
                     <button
                       key={board.id}
-                      className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-sm text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-foreground"
+                      className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-[13px] text-zinc-500 hover:bg-white/[0.04] hover:text-zinc-300 transition-colors cursor-pointer"
                     >
                       <span>{board.emoji}</span>
                       <span className="truncate">{board.name}</span>
@@ -139,13 +136,13 @@ export function AppSidebar({ isOpen, onToggle }: AppSidebarProps) {
       </ScrollArea>
 
       {/* Bottom section */}
-      <div className="border-t border-sidebar-border p-3">
-        <div className="space-y-1">
-          <button className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-sm text-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-foreground">
+      <div className="border-t border-white/[0.06] p-3">
+        <div className="space-y-0.5">
+          <button className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-[13px] text-zinc-500 hover:bg-white/[0.04] hover:text-zinc-300 transition-colors cursor-pointer">
             <Settings className="h-4 w-4" />
             <span>Settings</span>
           </button>
-          <button className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-sm text-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-foreground">
+          <button className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-[13px] text-zinc-500 hover:bg-white/[0.04] hover:text-zinc-300 transition-colors cursor-pointer">
             <HelpCircle className="h-4 w-4" />
             <span>Help</span>
           </button>
@@ -157,7 +154,7 @@ export function AppSidebar({ isOpen, onToggle }: AppSidebarProps) {
   return (
     <>
       {isOpen && (
-        <aside className="relative flex w-64 flex-col border-r border-sidebar-border bg-sidebar">
+        <aside className="relative flex w-64 flex-col border-r border-white/[0.04] bg-[#131313]">
           <SidebarContent />
         </aside>
       )}
@@ -167,10 +164,10 @@ export function AppSidebar({ isOpen, onToggle }: AppSidebarProps) {
       {!isOpen && showHoverPanel && (
         <>
           {/* Backdrop */}
-          <div className="fixed inset-0 z-40 bg-black/20" onMouseEnter={() => setShowHoverPanel(false)} />
+          <div className="fixed inset-0 z-40 bg-black/30" onMouseEnter={() => setShowHoverPanel(false)} />
           {/* Panel */}
           <aside
-            className="fixed left-0 top-0 z-50 flex h-full w-64 flex-col border-r border-sidebar-border bg-sidebar shadow-2xl"
+            className="fixed left-0 top-0 z-50 flex h-full w-64 flex-col border-r border-white/[0.04] bg-[#131313] shadow-2xl shadow-black/50"
             onMouseLeave={() => setShowHoverPanel(false)}
           >
             <SidebarContent inHoverPanel />

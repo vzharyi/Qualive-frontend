@@ -1,8 +1,9 @@
 import { useState } from "react"
 import { KanbanColumn } from "@/features/board/components/kanban-column"
-import { Button } from "@/components/ui/button"
 import { Plus } from "lucide-react"
 import type { Column, Task } from "@/features/board/types"
+
+const PRIORITY_WEIGHT = { high: 3, medium: 2, low: 1, undefined: 0 } as const
 
 const initialColumns: Column[] = [
   {
@@ -141,30 +142,50 @@ export function KanbanBoard() {
     setSourceColumnId(null)
   }
 
-  const handleDrop = (targetColumnId: string) => {
-    if (!draggedTask || !sourceColumnId || sourceColumnId === targetColumnId) {
-      return
-    }
+  const handleDrop = (targetColumnId: string, targetTaskId?: string, position?: "top" | "bottom") => {
+    if (!draggedTask || !sourceColumnId) return
+    if (sourceColumnId === targetColumnId && targetTaskId === draggedTask.id) return
 
-    setColumns((prevColumns) =>
-      prevColumns.map((column) => {
-        // Remove task from source column
+    setColumns((prevColumns) => {
+      // First, remove task from source column
+      const columnsAfterRemove = prevColumns.map((column) => {
         if (column.id === sourceColumnId) {
           return {
             ...column,
             tasks: column.tasks.filter((task) => task.id !== draggedTask.id),
           }
         }
-        // Add task to target column
+        return column
+      })
+
+      // Then add into target column
+      return columnsAfterRemove.map((column) => {
         if (column.id === targetColumnId) {
-          return {
-            ...column,
-            tasks: [...column.tasks, draggedTask],
+          const newTasks = [...column.tasks]
+          if (targetTaskId) {
+            const index = newTasks.findIndex((t) => t.id === targetTaskId)
+            if (index !== -1) {
+              const insertIndex = position === "bottom" ? index + 1 : index
+              newTasks.splice(insertIndex, 0, draggedTask)
+            } else {
+              newTasks.push(draggedTask)
+            }
+          } else {
+            newTasks.push(draggedTask)
           }
+
+          // Stable sort by priority
+          newTasks.sort((a, b) => {
+            const weightA = PRIORITY_WEIGHT[a.priority as keyof typeof PRIORITY_WEIGHT] || 0
+            const weightB = PRIORITY_WEIGHT[b.priority as keyof typeof PRIORITY_WEIGHT] || 0
+            return weightB - weightA // descending
+          })
+
+          return { ...column, tasks: newTasks }
         }
         return column
-      }),
-    )
+      })
+    })
 
     handleDragEnd()
   }
@@ -178,19 +199,17 @@ export function KanbanBoard() {
           onDragStart={handleDragStart}
           onDragEnd={handleDragEnd}
           onDrop={handleDrop}
-          isDragOver={draggedTask !== null && sourceColumnId !== column.id}
+          isDraggingBoard={!!draggedTask}
+          draggedTask={draggedTask}
         />
       ))}
 
       {/* Add column button */}
       <div className="flex-shrink-0">
-        <Button
-          variant="outline"
-          className="h-10 w-72 justify-start gap-2 border-dashed bg-card/50 text-muted-foreground hover:bg-card hover:text-foreground"
-        >
+        <button className="flex h-10 w-72 items-center justify-start gap-2 rounded-xl border border-dashed border-white/[0.06] bg-white/[0.02] px-4 text-[13px] text-zinc-600 hover:bg-white/[0.04] hover:text-zinc-400 hover:border-white/[0.1] transition-all cursor-pointer">
           <Plus className="h-4 w-4" />
           Add Column
-        </Button>
+        </button>
       </div>
     </div>
   )

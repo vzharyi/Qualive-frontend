@@ -75,7 +75,7 @@ export function HeroSection() {
                     className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-20"
                 >
                     <Link
-                        to="/login"
+                        to="/register"
                         className="px-8 py-3.5 bg-white text-black rounded-xl font-semibold text-base hover:bg-zinc-200 transition-all duration-200 hover:scale-105 active:scale-95 shadow-lg shadow-white/10"
                     >
                         Get Started

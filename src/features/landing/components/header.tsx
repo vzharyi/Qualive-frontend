@@ -117,7 +117,7 @@ export function Header() {
                         Sign In
                     </Link>
                     <Link
-                        to="/login"
+                        to="/register"
                         className="text-sm px-4 py-2 bg-white text-black rounded-lg font-medium hover:bg-zinc-200 transition-all duration-200 hover:scale-105 active:scale-95"
                     >
                         Get Started
