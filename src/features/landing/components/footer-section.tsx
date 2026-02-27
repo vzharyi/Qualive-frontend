@@ -6,7 +6,7 @@ export function FooterSection() {
             <div className="max-w-6xl mx-auto px-6">
                 <div className="flex flex-col sm:flex-row items-center justify-between gap-6">
                     {/* Logo */}
-                    <Link to="/landing" className="flex items-center gap-2">
+                    <Link to="/" className="flex items-center gap-2">
                         <div className="w-7 h-7 rounded-md bg-gradient-to-br from-emerald-400 to-emerald-600 flex items-center justify-center text-black font-bold text-xs">
                             Q
                         </div>

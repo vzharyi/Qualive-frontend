@@ -1,6 +1,11 @@
 import { useState, useRef, useLayoutEffect, type ReactNode } from "react"
 import { motion } from "framer-motion"
 import { Link, useLocation, useNavigate } from "react-router-dom"
+import { useLogin, useRegister } from "../api/auth.queries"
+import { authApi } from "../api/auth.api"
+import { loginSchema, registerSchema } from "../types/auth.types"
+import type { ZodError } from "zod"
+import { AxiosError } from "axios"
 
 /* ─── Icons ─── */
 function GoogleIcon({ className }: { className?: string }) {
@@ -25,6 +30,8 @@ function GitHubIcon({ className }: { className?: string }) {
 /* ─── Shared input style ─── */
 const inputClass =
     "w-full h-10 px-3.5 rounded-lg border border-white/[0.07] bg-white/[0.03] text-[13px] text-white placeholder:text-zinc-600 focus:outline-none focus:border-emerald-500/40 focus:bg-white/[0.05] transition-all duration-200"
+const inputErrorClass =
+    "w-full h-10 px-3.5 rounded-lg border border-red-500/40 bg-white/[0.03] text-[13px] text-white placeholder:text-zinc-600 focus:outline-none focus:border-red-500/60 focus:bg-white/[0.05] transition-all duration-200"
 
 /* ─── Collapsible wrapper — animates height smoothly ─── */
 function CollapsibleField({ visible, children }: { visible: boolean; children: ReactNode }) {
@@ -52,6 +59,15 @@ function CollapsibleField({ visible, children }: { visible: boolean; children: R
     )
 }
 
+/* ─── Field error helper ─── */
+function FieldError({ message }: { message?: string }) {
+    if (!message) return null
+    return <p className="text-[11px] text-red-400 mt-1">{message}</p>
+}
+
+/* ─── Types ─── */
+type FieldErrors = Record<string, string>
+
 /* ─── Main Component ─── */
 export function AuthForm() {
     const location = useLocation()
@@ -59,17 +75,103 @@ export function AuthForm() {
     const initialMode = location.pathname === "/register" ? "register" : "login"
     const [mode, setMode] = useState<"login" | "register">(initialMode)
 
+    // Form state
+    const [login, setLogin] = useState("")
+    const [email, setEmail] = useState("")
+    const [password, setPassword] = useState("")
+    const [firstName, setFirstName] = useState("")
+    const [lastName, setLastName] = useState("")
+    const [confirmPassword, setConfirmPassword] = useState("")
+
+    // Error state
+    const [fieldErrors, setFieldErrors] = useState<FieldErrors>({})
+    const [serverError, setServerError] = useState("")
+
+    // Mutations
+    const loginMutation = useLogin()
+    const registerMutation = useRegister()
+
+    const isLogin = mode === "login"
+    const isLoading = loginMutation.isPending || registerMutation.isPending
+
     const toggleMode = () => {
         const next = mode === "login" ? "register" : "login"
         setMode(next)
+        setFieldErrors({})
+        setServerError("")
         navigate(next === "login" ? "/login" : "/register", { replace: true })
+    }
+
+    const extractFieldErrors = (zodError: ZodError): FieldErrors => {
+        const errors: FieldErrors = {}
+        for (const issue of zodError.issues) {
+            const field = issue.path[0]
+            if (field && !errors[String(field)]) {
+                errors[String(field)] = issue.message
+            }
+        }
+        return errors
+    }
+
+    const getServerErrorMessage = (error: unknown): string => {
+        if (error instanceof AxiosError) {
+            const data = error.response?.data
+            if (data?.message) {
+                return typeof data.message === 'string'
+                    ? data.message
+                    : Array.isArray(data.message)
+                        ? data.message[0]
+                        : 'Something went wrong'
+            }
+        }
+        return 'Something went wrong'
     }
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault()
-    }
+        setFieldErrors({})
+        setServerError("")
 
-    const isLogin = mode === "login"
+        if (isLogin) {
+            // Validate login
+            const result = loginSchema.safeParse({ login, password })
+            if (!result.success) {
+                setFieldErrors(extractFieldErrors(result.error))
+                return
+            }
+
+            loginMutation.mutate(result.data, {
+                onError: (error) => {
+                    setServerError(getServerErrorMessage(error))
+                },
+            })
+        } else {
+            // Validate confirm password
+            if (password !== confirmPassword) {
+                setFieldErrors({ confirmPassword: "Passwords do not match" })
+                return
+            }
+
+            // Validate register
+            const result = registerSchema.safeParse({
+                login,
+                password,
+                email,
+                firstName,
+                lastName,
+            })
+            if (!result.success) {
+                setFieldErrors(extractFieldErrors(result.error))
+                return
+            }
+
+            registerMutation.mutate(result.data, {
+                onError: (error) => {
+                    setServerError(getServerErrorMessage(error))
+                },
+            })
+        }
+    }
 
     return (
         <div className="relative w-full max-w-[400px]">
@@ -84,7 +186,7 @@ export function AuthForm() {
             >
                 {/* ─── Header ─── */}
                 <div className="flex items-center justify-center gap-3 mb-7">
-                    <Link to="/landing" className="shrink-0 group">
+                    <Link to="/" className="shrink-0 group">
                         <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-emerald-400 to-emerald-600 flex items-center justify-center text-black font-bold text-xs group-hover:scale-110 transition-transform duration-200">
                             Q
                         </div>
@@ -113,6 +215,7 @@ export function AuthForm() {
                         <div className="grid grid-cols-2 gap-2.5 mb-5">
                             <button
                                 type="button"
+                                onClick={() => authApi.googleAuth()}
                                 className="group flex items-center justify-center gap-2 h-10 rounded-lg border border-white/[0.07] bg-white/[0.02] hover:bg-white/[0.05] hover:border-white/[0.12] transition-all duration-150 cursor-pointer"
                             >
                                 <GoogleIcon className="w-4 h-4" />
@@ -120,6 +223,7 @@ export function AuthForm() {
                             </button>
                             <button
                                 type="button"
+                                onClick={() => authApi.githubAuth()}
                                 className="group flex items-center justify-center gap-2 h-10 rounded-lg border border-white/[0.07] bg-white/[0.02] hover:bg-white/[0.05] hover:border-white/[0.12] transition-all duration-150 cursor-pointer"
                             >
                                 <GitHubIcon className="w-4 h-4 text-zinc-400 group-hover:text-zinc-200 transition-colors" />
@@ -139,23 +243,68 @@ export function AuthForm() {
                             </div>
                         </div>
 
+                        {/* ─── Server error ─── */}
+                        {serverError && (
+                            <div className="mb-4 px-3.5 py-2.5 rounded-lg border border-red-500/20 bg-red-500/[0.06] text-[12px] text-red-400">
+                                {serverError}
+                            </div>
+                        )}
+
                         {/* ─── Form ─── */}
                         <form onSubmit={handleSubmit} className="space-y-3.5">
-                            {/* Extra fields slide in/out smoothly */}
+                            {/* First & Last Name — register only */}
                             <CollapsibleField visible={!isLogin}>
-                                <label htmlFor="name" className="block text-[12px] text-zinc-400 mb-1.5 font-medium">
-                                    Name
-                                </label>
-                                <input
-                                    id="name"
-                                    type="text"
-                                    placeholder="Your name"
-                                    required={!isLogin}
-                                    className={inputClass}
-                                />
+                                <div className="grid grid-cols-2 gap-2.5">
+                                    <div>
+                                        <label htmlFor="firstName" className="block text-[12px] text-zinc-400 mb-1.5 font-medium">
+                                            First name
+                                        </label>
+                                        <input
+                                            id="firstName"
+                                            type="text"
+                                            placeholder="John"
+                                            value={firstName}
+                                            onChange={(e) => setFirstName(e.target.value)}
+                                            className={fieldErrors.firstName ? inputErrorClass : inputClass}
+                                        />
+                                        <FieldError message={fieldErrors.firstName} />
+                                    </div>
+                                    <div>
+                                        <label htmlFor="lastName" className="block text-[12px] text-zinc-400 mb-1.5 font-medium">
+                                            Last name
+                                        </label>
+                                        <input
+                                            id="lastName"
+                                            type="text"
+                                            placeholder="Doe"
+                                            value={lastName}
+                                            onChange={(e) => setLastName(e.target.value)}
+                                            className={fieldErrors.lastName ? inputErrorClass : inputClass}
+                                        />
+                                        <FieldError message={fieldErrors.lastName} />
+                                    </div>
+                                </div>
                             </CollapsibleField>
 
+                            {/* Login */}
                             <div>
+                                <label htmlFor="login" className="block text-[12px] text-zinc-400 mb-1.5 font-medium">
+                                    Login
+                                </label>
+                                <input
+                                    id="login"
+                                    type="text"
+                                    placeholder="your_login"
+                                    value={login}
+                                    onChange={(e) => setLogin(e.target.value)}
+                                    required
+                                    className={fieldErrors.login ? inputErrorClass : inputClass}
+                                />
+                                <FieldError message={fieldErrors.login} />
+                            </div>
+
+                            {/* Email — register only */}
+                            <CollapsibleField visible={!isLogin}>
                                 <label htmlFor="email" className="block text-[12px] text-zinc-400 mb-1.5 font-medium">
                                     Email
                                 </label>
@@ -163,11 +312,14 @@ export function AuthForm() {
                                     id="email"
                                     type="email"
                                     placeholder="you@example.com"
-                                    required
-                                    className={inputClass}
+                                    value={email}
+                                    onChange={(e) => setEmail(e.target.value)}
+                                    className={fieldErrors.email ? inputErrorClass : inputClass}
                                 />
-                            </div>
+                                <FieldError message={fieldErrors.email} />
+                            </CollapsibleField>
 
+                            {/* Password */}
                             <div>
                                 <div className="flex items-center justify-between mb-1.5">
                                     <label htmlFor="password" className="text-[12px] text-zinc-400 font-medium">
@@ -183,11 +335,15 @@ export function AuthForm() {
                                     id="password"
                                     type="password"
                                     placeholder="••••••••"
+                                    value={password}
+                                    onChange={(e) => setPassword(e.target.value)}
                                     required
-                                    className={inputClass}
+                                    className={fieldErrors.password ? inputErrorClass : inputClass}
                                 />
+                                <FieldError message={fieldErrors.password} />
                             </div>
 
+                            {/* Confirm Password — register only */}
                             <CollapsibleField visible={!isLogin}>
                                 <label htmlFor="confirm-password" className="block text-[12px] text-zinc-400 mb-1.5 font-medium">
                                     Confirm password
@@ -196,16 +352,23 @@ export function AuthForm() {
                                     id="confirm-password"
                                     type="password"
                                     placeholder="••••••••"
-                                    required={!isLogin}
-                                    className={inputClass}
+                                    value={confirmPassword}
+                                    onChange={(e) => setConfirmPassword(e.target.value)}
+                                    className={fieldErrors.confirmPassword ? inputErrorClass : inputClass}
                                 />
+                                <FieldError message={fieldErrors.confirmPassword} />
                             </CollapsibleField>
 
                             <button
                                 type="submit"
-                                className="w-full h-10 mt-1 rounded-lg bg-emerald-500 text-[13px] text-black font-semibold hover:bg-emerald-400 active:scale-[0.98] transition-all duration-150 cursor-pointer"
+                                disabled={isLoading}
+                                className="w-full h-10 mt-1 rounded-lg bg-emerald-500 text-[13px] text-black font-semibold hover:bg-emerald-400 active:scale-[0.98] transition-all duration-150 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                             >
-                                {isLogin ? "Continue" : "Create account"}
+                                {isLoading
+                                    ? "Loading..."
+                                    : isLogin
+                                        ? "Continue"
+                                        : "Create account"}
                             </button>
                         </form>
                     </div>

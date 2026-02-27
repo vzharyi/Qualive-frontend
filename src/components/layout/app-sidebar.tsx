@@ -1,40 +1,9 @@
 import { useState } from "react"
+import { Link, useParams } from "react-router-dom"
 import { cn } from "@/lib/utils"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import { PanelLeftClose, Plus, Star, Folder, Settings, HelpCircle, ChevronDown } from "lucide-react"
-
-const workspaces = [
-  {
-    id: "1",
-    name: "Marketing",
-    boards: [
-      { id: "1-1", name: "SMM Campaigns", emoji: "📱" },
-      { id: "1-2", name: "Content Plan", emoji: "📝" },
-      { id: "1-3", name: "Analytics", emoji: "📊" },
-    ],
-  },
-  {
-    id: "2",
-    name: "Development",
-    boards: [
-      { id: "2-1", name: "Sprint #24", emoji: "🚀" },
-      { id: "2-2", name: "Bugs", emoji: "🐛" },
-    ],
-  },
-  {
-    id: "3",
-    name: "Design",
-    boards: [
-      { id: "3-1", name: "UI Kit", emoji: "🎨" },
-      { id: "3-2", name: "Rebranding", emoji: "✨" },
-    ],
-  },
-]
-
-const favorites = [
-  { id: "fav-1", name: "Sprint #24", emoji: "🚀" },
-  { id: "fav-2", name: "SMM Campaigns", emoji: "📱" },
-]
+import { PanelLeftClose, Plus, Folder, Settings, HelpCircle, LayoutDashboard, Loader2 } from "lucide-react"
+import { useProjects } from "@/features/projects/api/projects.queries"
 
 interface AppSidebarProps {
   isOpen: boolean
@@ -42,23 +11,20 @@ interface AppSidebarProps {
 }
 
 export function AppSidebar({ isOpen, onToggle }: AppSidebarProps) {
-  const [expandedWorkspaces, setExpandedWorkspaces] = useState<string[]>(["1"])
   const [showHoverPanel, setShowHoverPanel] = useState(false)
-
-  const toggleWorkspace = (id: string) => {
-    setExpandedWorkspaces((prev) => (prev.includes(id) ? prev.filter((w) => w !== id) : [...prev, id]))
-  }
+  const { data: projects, isLoading } = useProjects()
+  const { id: activeProjectId } = useParams()
 
   const SidebarContent = ({ inHoverPanel = false }: { inHoverPanel?: boolean }) => (
     <>
       {/* Logo */}
       <div className="flex h-14 items-center justify-between border-b border-white/[0.06] px-4">
-        <div className="flex items-center gap-2.5">
+        <Link to="/dashboard" className="flex items-center gap-2.5">
           <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-emerald-400 to-emerald-600 text-black font-bold text-xs">
             Q
           </div>
           <span className="font-semibold text-white text-[15px] tracking-tight">Qualive</span>
-        </div>
+        </Link>
         {!inHoverPanel && (
           <button
             onClick={onToggle}
@@ -69,69 +35,61 @@ export function AppSidebar({ isOpen, onToggle }: AppSidebarProps) {
         )}
       </div>
 
-      {/* Create button */}
-      <div className="p-3 mb-2">
-        <button className="w-full flex items-center justify-start gap-2 h-9 px-3 rounded-lg bg-white/[0.04] text-zinc-300 text-[13px] font-medium hover:bg-white/[0.08] hover:text-white transition-all cursor-pointer">
-          <Plus className="h-4 w-4" />
-          <span>New task</span>
-        </button>
+      {/* Dashboard link */}
+      <div className="p-3 mb-1">
+        <Link
+          to="/dashboard"
+          className="w-full flex items-center gap-2 h-9 px-3 rounded-lg text-zinc-400 text-[13px] font-medium hover:bg-white/[0.04] hover:text-white transition-all"
+        >
+          <LayoutDashboard className="h-4 w-4" />
+          <span>Dashboard</span>
+        </Link>
       </div>
 
       <ScrollArea className="flex-1 px-3">
-        {/* Favorites */}
-        <div className="mb-5">
-          <div className="mb-2 flex items-center gap-2 px-2 text-[10px] font-medium uppercase tracking-[0.08em] text-zinc-600">
-            <Star className="h-3 w-3" />
-            <span>Favorites</span>
-          </div>
-          <div className="space-y-0.5">
-            {favorites.map((item) => (
-              <button
-                key={item.id}
-                className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-[13px] text-zinc-400 hover:bg-white/[0.04] hover:text-zinc-200 transition-colors cursor-pointer"
-              >
-                <span>{item.emoji}</span>
-                <span className="truncate">{item.name}</span>
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Workspaces */}
+        {/* Projects */}
         <div className="space-y-1">
-          <div className="flex items-center gap-2 px-2 text-[10px] font-medium uppercase tracking-[0.08em] text-zinc-600 mb-2">
-            <Folder className="h-3 w-3" />
-            <span>Workspaces</span>
-          </div>
-          {workspaces.map((workspace) => (
-            <div key={workspace.id}>
-              <button
-                onClick={() => toggleWorkspace(workspace.id)}
-                className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-[13px] font-medium text-zinc-300 hover:bg-white/[0.04] transition-colors cursor-pointer"
-              >
-                <ChevronDown
-                  className={cn(
-                    "h-3.5 w-3.5 text-zinc-600 transition-transform duration-200",
-                    !expandedWorkspaces.includes(workspace.id) && "-rotate-90",
-                  )}
-                />
-                <span className="truncate">{workspace.name}</span>
-              </button>
-              {expandedWorkspaces.includes(workspace.id) && (
-                <div className="ml-4 mt-0.5 space-y-0.5 border-l border-white/[0.06] pl-2.5">
-                  {workspace.boards.map((board) => (
-                    <button
-                      key={board.id}
-                      className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-[13px] text-zinc-500 hover:bg-white/[0.04] hover:text-zinc-300 transition-colors cursor-pointer"
-                    >
-                      <span>{board.emoji}</span>
-                      <span className="truncate">{board.name}</span>
-                    </button>
-                  ))}
-                </div>
-              )}
+          <div className="flex items-center justify-between px-2 mb-2">
+            <div className="flex items-center gap-2 text-[10px] font-medium uppercase tracking-[0.08em] text-zinc-600">
+              <Folder className="h-3 w-3" />
+              <span>Projects</span>
             </div>
-          ))}
+            <Link
+              to="/dashboard"
+              className="flex h-5 w-5 items-center justify-center rounded text-zinc-600 hover:text-zinc-300 hover:bg-white/[0.04] transition-colors"
+              title="Create project"
+            >
+              <Plus className="h-3 w-3" />
+            </Link>
+          </div>
+
+          {isLoading ? (
+            <div className="flex items-center justify-center py-4">
+              <Loader2 className="h-4 w-4 text-zinc-600 animate-spin" />
+            </div>
+          ) : projects && projects.length > 0 ? (
+            projects.map((project) => (
+              <Link
+                key={project.id}
+                to={`/projects/${project.id}`}
+                className={cn(
+                  "flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-[13px] transition-colors",
+                  activeProjectId && Number(activeProjectId) === project.id
+                    ? "bg-white/[0.06] text-white"
+                    : "text-zinc-400 hover:bg-white/[0.04] hover:text-zinc-200",
+                )}
+              >
+                <div className="flex h-6 w-6 items-center justify-center rounded-md bg-gradient-to-br from-emerald-400/20 to-violet-500/20 text-[10px] font-bold text-white shrink-0">
+                  {project.name.charAt(0).toUpperCase()}
+                </div>
+                <span className="truncate">{project.name}</span>
+              </Link>
+            ))
+          ) : (
+            <p className="px-2.5 py-3 text-[12px] text-zinc-600 text-center">
+              No projects yet
+            </p>
+          )}
         </div>
       </ScrollArea>
 
