@@ -3,63 +3,60 @@ import type React from "react"
 import { useState, useRef, useEffect } from "react"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { cn } from "@/lib/utils"
-import { Paperclip, MessageSquare, CheckSquare, Calendar, Pencil } from "lucide-react"
-import type { Task } from "@/features/board/types"
+import { Pencil } from "lucide-react"
+import type { Task } from "@/features/tasks/types/tasks.types"
 
 interface TaskCardProps {
   task: Task
   colorRGB?: string
   columnId: string
-  onDragStart: (task: Task, columnId: string) => void
-  onDragEnd: () => void
-  onDrop: (columnId: string, targetTaskId?: string, position?: "top" | "bottom") => void
-  draggedTask?: Task | null
-  previousTaskId?: string
-  nextTaskId?: string
+  onEditTask: (task: Task) => void
 }
 
-export function TaskCard({ task, colorRGB, columnId, onDragStart, onDragEnd, onDrop, draggedTask, previousTaskId, nextTaskId }: TaskCardProps) {
+export function TaskCard({ task, colorRGB, columnId, onEditTask }: TaskCardProps) {
   const [isDragging, setIsDragging] = useState(false)
-  const [dragHover, setDragHover] = useState<"top" | "bottom" | null>(null)
   const dragGhostRef = useRef<HTMLElement | null>(null)
   const dragOffset = useRef({ x: 0, y: 0 })
 
-  const isOverdue = task.dueDate && new Date(task.dueDate) < new Date()
-
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString)
-    return date.toLocaleDateString("en-US", { day: "numeric", month: "short" })
-  }
-
-  const getPriorityColor = (priority: Task["priority"]) => {
+  const getPriorityColor = (priority?: string | null) => {
     switch (priority) {
-      case "high":
+      case "HIGH":
         return "bg-red-500"
-      case "medium":
+      case "MEDIUM":
         return "bg-amber-500"
-      case "low":
+      case "LOW":
         return "bg-zinc-500"
       default:
-        return "bg-zinc-500"
+        return "bg-zinc-600"
+    }
+  }
+
+  const getPriorityLabel = (priority?: string | null) => {
+    switch (priority) {
+      case "HIGH":
+        return "High"
+      case "MEDIUM":
+        return "Medium"
+      case "LOW":
+        return "Low"
+      default:
+        return "—"
     }
   }
 
   const handleDragStart = (e: React.DragEvent) => {
     e.dataTransfer.effectAllowed = "move"
+    e.dataTransfer.setData("taskId", String(task.id))
 
-    // 1. Hide the native ghost by setting an invisible image
+    // Hide native ghost
     const blankImg = new Image()
     blankImg.src = "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7"
     e.dataTransfer.setDragImage(blankImg, 0, 0)
 
-    // 2. Clone the element for our custom fixed ghost
+    // Clone for custom ghost
     const target = e.currentTarget as HTMLElement
     const rect = target.getBoundingClientRect()
-
-    dragOffset.current = {
-      x: e.clientX - rect.left,
-      y: e.clientY - rect.top
-    }
+    dragOffset.current = { x: e.clientX - rect.left, y: e.clientY - rect.top }
 
     const ghost = target.cloneNode(true) as HTMLElement
     ghost.setAttribute("data-drag-ghost", "true")
@@ -74,21 +71,14 @@ export function TaskCard({ task, colorRGB, columnId, onDragStart, onDragEnd, onD
     ghost.style.boxShadow = "0 20px 40px rgba(0,0,0,0.5)"
     ghost.style.opacity = "0.4"
     ghost.style.transition = "none"
-
     document.body.appendChild(ghost)
     dragGhostRef.current = ghost
 
-    setTimeout(() => {
-      setIsDragging(true)
-    }, 0)
-
-    onDragStart(task, columnId)
+    setTimeout(() => setIsDragging(true), 0)
   }
 
   const handleDrag = (e: React.DragEvent) => {
-    // Chrome sometimes fires a last drag event with 0,0
     if (e.clientX === 0 && e.clientY === 0) return
-
     if (dragGhostRef.current) {
       dragGhostRef.current.style.transform = `translate(${e.clientX - dragOffset.current.x}px, ${e.clientY - dragOffset.current.y}px)`
     }
@@ -96,54 +86,31 @@ export function TaskCard({ task, colorRGB, columnId, onDragStart, onDragEnd, onD
 
   const handleDragEnd = () => {
     setIsDragging(false)
-    if (dragGhostRef.current && dragGhostRef.current.parentNode) {
+    if (dragGhostRef.current?.parentNode) {
       dragGhostRef.current.parentNode.removeChild(dragGhostRef.current)
       dragGhostRef.current = null
     }
-    // Clean up any stray ghosts that might have lost their ref connection
-    document.querySelectorAll('[data-drag-ghost="true"]').forEach(el => el.remove())
-    onDragEnd()
-  }
-
-  const handleDragOver = (e: React.DragEvent) => {
-    e.preventDefault()
-    if (isDragging || !draggedTask) return
-
-    if (draggedTask.priority !== task.priority) return
-    if (draggedTask.id === task.id) return
-
-    const rect = e.currentTarget.getBoundingClientRect()
-    const y = e.clientY - rect.top
-    const position = y < rect.height / 2 ? "top" : "bottom"
-
-    if (position === "top" && draggedTask.id === previousTaskId) return
-
-    if (position === "bottom" && draggedTask.id === nextTaskId) return
-
-    setDragHover(position)
-  }
-
-  const handleDragLeave = (e: React.DragEvent) => {
-    if (!e.currentTarget.contains(e.relatedTarget as Node)) {
-      setDragHover(null)
-    }
-  }
-
-  const handleDrop = (e: React.DragEvent) => {
-    e.preventDefault()
-    e.stopPropagation()
-    const position = dragHover || "top"
-    setDragHover(null)
-    onDrop(columnId, task.id, position)
+    document.querySelectorAll('[data-drag-ghost="true"]').forEach((el) => el.remove())
   }
 
   useEffect(() => {
     return () => {
-      if (dragGhostRef.current && dragGhostRef.current.parentNode) {
+      if (dragGhostRef.current?.parentNode) {
         dragGhostRef.current.parentNode.removeChild(dragGhostRef.current)
       }
     }
   }, [])
+
+  // Assignee display
+  const assigneeName = task.assignee
+    ? task.assignee.firstName && task.assignee.lastName
+      ? `${task.assignee.firstName} ${task.assignee.lastName}`
+      : task.assignee.login
+    : null
+
+  const assigneeInitial = task.assignee
+    ? task.assignee.firstName?.charAt(0) || task.assignee.login.charAt(0)
+    : null
 
   return (
     <div
@@ -151,13 +118,8 @@ export function TaskCard({ task, colorRGB, columnId, onDragStart, onDragEnd, onD
       onDragStart={handleDragStart}
       onDrag={handleDrag}
       onDragEnd={handleDragEnd}
-      onDragOver={handleDragOver}
-      onDragLeave={handleDragLeave}
-      onDrop={handleDrop}
       className={cn(
         "group relative cursor-grab rounded-xl border p-3.5 transition-all hover:brightness-110",
-        "before:absolute before:-top-1 before:left-0 before:h-1 before:w-full before:content-['']",
-        "after:absolute after:-bottom-1 after:left-0 after:h-1 after:w-full after:content-['']",
         isDragging && "opacity-50 cursor-grabbing scale-[0.98]",
       )}
       style={{
@@ -167,21 +129,14 @@ export function TaskCard({ task, colorRGB, columnId, onDragStart, onDragEnd, onD
         borderColor: colorRGB ? `rgba(${colorRGB}, 0.12)` : "rgba(255,255,255,0.06)",
       }}
     >
-      {/* Drop Indicators */}
-      {dragHover === "top" && (
-        <div
-          className="pointer-events-none absolute left-0 z-50 w-full rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.8)]"
-          style={{ top: "-5px", height: "2px" }}
-        />
-      )}
-      {dragHover === "bottom" && (
-        <div
-          className="pointer-events-none absolute left-0 z-50 w-full rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.8)]"
-          style={{ bottom: "-5px", height: "2px" }}
-        />
-      )}
       {/* Quick edit button */}
-      <button className="absolute right-2 top-2 flex h-6 w-6 items-center justify-center rounded-md bg-white/[0.06] opacity-0 transition-opacity group-hover:opacity-100 hover:bg-white/[0.1] cursor-pointer">
+      <button
+        onClick={(e) => {
+          e.stopPropagation()
+          onEditTask(task)
+        }}
+        className="absolute right-2 top-2 flex h-6 w-6 items-center justify-center rounded-md bg-white/[0.06] opacity-0 transition-opacity group-hover:opacity-100 hover:bg-white/[0.1] cursor-pointer"
+      >
         <Pencil className="h-3 w-3 text-zinc-400" />
       </button>
 
@@ -189,124 +144,32 @@ export function TaskCard({ task, colorRGB, columnId, onDragStart, onDragEnd, onD
       <h4 className="mb-2 pr-6 text-[13px] font-medium leading-snug text-zinc-200">{task.title}</h4>
 
       {/* Assignee */}
-      {task.assignee && (
+      {assigneeName && (
         <div className="flex items-center gap-2 mb-2">
           <Avatar className="h-5 w-5 ring-1 ring-white/[0.06]">
-            <AvatarImage src={task.assignee.avatar || "/placeholder.svg"} alt={task.assignee.name} />
-            <AvatarFallback className="text-[9px] bg-zinc-800 text-zinc-500">{task.assignee.name.charAt(0)}</AvatarFallback>
+            {task.assignee?.avatarUrl && <AvatarImage src={task.assignee.avatarUrl} alt={assigneeName} />}
+            <AvatarFallback className="text-[9px] bg-zinc-800 text-zinc-500">{assigneeInitial}</AvatarFallback>
           </Avatar>
-          <span className="text-[11px] text-zinc-500">{task.assignee.name}</span>
+          <span className="text-[11px] text-zinc-500">{assigneeName}</span>
         </div>
       )}
 
-      {/* Labels */}
-      {task.labels && task.labels.length > 0 && (
-        <div className="flex flex-wrap gap-1">
-          {task.labels.map((label) => (
-            <span
-              key={label.id}
-              className={cn("inline-flex h-[18px] items-center px-1.5 rounded text-[10px] font-medium text-white/90", label.color)}
-            >
-              {label.name}
-            </span>
-          ))}
-        </div>
-      )}
-
-      {/* Bottom row with meta info */}
-      {(task.dueDate || task.attachments > 0 || task.checklist || task.comments > 0 || task.codeRating !== undefined) && (
-        <div className="mt-3 flex h-6 w-full items-center justify-between text-[11px] text-zinc-600">
-          <div className="flex items-center gap-3">
-            {/* Due date */}
-            {task.dueDate && (
-              <div className={cn("flex items-center gap-1", isOverdue && "text-red-400")}>
-                <Calendar className="h-3 w-3" />
-                <span>{formatDate(task.dueDate)}</span>
-              </div>
-            )}
-
-            {/* Attachments */}
-            {task.attachments > 0 && (
-              <div className="flex items-center gap-1">
-                <Paperclip className="h-3 w-3" />
-                <span>{task.attachments}</span>
-              </div>
-            )}
-
-            {/* Checklist */}
-            {task.checklist && (
-              <div
-                className={cn(
-                  "flex items-center gap-1",
-                  task.checklist.completed === task.checklist.total && "text-emerald-500",
-                )}
-              >
-                <CheckSquare className="h-3 w-3" />
-                <span>
-                  {task.checklist.completed}/{task.checklist.total}
-                </span>
-              </div>
-            )}
-
-            {/* Comments */}
-            {task.comments > 0 && (
-              <div className="flex items-center gap-1">
-                <MessageSquare className="h-3 w-3" />
-                <span>{task.comments}</span>
-              </div>
-            )}
-          </div>
-
-          <div className="flex items-center gap-2.5">
-            {/* Code Rating */}
-            {task.codeRating !== undefined && (
-              <div
-                className="relative flex h-6 w-6 items-center justify-center"
-                title={`Code Rating: ${task.codeRating}`}
-              >
-                <svg className="absolute inset-0 h-full w-full -rotate-90">
-                  <circle
-                    cx="12"
-                    cy="12"
-                    r="10"
-                    className="fill-none stroke-white/10"
-                    strokeWidth="2"
-                  />
-                  <circle
-                    cx="12"
-                    cy="12"
-                    r="10"
-                    className={cn(
-                      "fill-none transition-all duration-1000 ease-out",
-                      task.codeRating >= 90 ? "stroke-emerald-500 drop-shadow-[0_0_3px_rgba(16,185,129,0.5)]" :
-                        task.codeRating >= 70 ? "stroke-amber-500 drop-shadow-[0_0_3px_rgba(245,158,11,0.5)]" :
-                          "stroke-red-500 drop-shadow-[0_0_3px_rgba(239,68,68,0.5)]"
-                    )}
-                    strokeWidth="2"
-                    strokeDasharray="62.8"
-                    strokeDashoffset={62.8 - (62.8 * task.codeRating) / 100}
-                    strokeLinecap="round"
-                  />
-                </svg>
-                <span className={cn(
-                  "z-10 text-[8px] font-bold",
-                  task.codeRating >= 90 ? "text-emerald-400" :
-                    task.codeRating >= 70 ? "text-amber-400" :
-                      "text-red-400"
-                )}>
-                  {task.codeRating}
-                </span>
-              </div>
-            )}
-
-            {/* Priority indicator */}
+      {/* Bottom row */}
+      <div className="mt-2 flex items-center justify-between text-[11px] text-zinc-600">
+        <span className="text-[10px] text-zinc-600">
+          #{task.id}
+        </span>
+        <div className="flex items-center gap-2">
+          {/* Priority indicator */}
+          <div className="flex items-center gap-1">
             <div
               className={cn("h-2 w-2 rounded-full", getPriorityColor(task.priority))}
-              title={`Priority: ${task.priority}`}
+              title={`Priority: ${getPriorityLabel(task.priority)}`}
             />
+            <span className="text-[10px]">{getPriorityLabel(task.priority)}</span>
           </div>
         </div>
-      )}
+      </div>
     </div>
   )
 }

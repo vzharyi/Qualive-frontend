@@ -1,87 +1,91 @@
-import { useState } from "react"
+import { useState, useMemo } from "react"
 import { KanbanColumn } from "@/features/board/components/kanban-column"
+import { TaskEditPanel } from "@/features/board/components/task-edit-panel"
 import { Reorder } from "framer-motion"
-import { Plus } from "lucide-react"
-import type { Column, Task } from "@/features/board/types"
+import { Plus, Loader2 } from "lucide-react"
 import type { Project } from "@/features/projects/types/projects.types"
-
-const PRIORITY_WEIGHT = { high: 3, medium: 2, low: 1, undefined: 0 } as const
-
-// Empty initial columns for a new project
-const emptyColumns: Column[] = [
-  { id: "todo", title: "To Do", color: "slate", tasks: [] },
-  { id: "in-progress", title: "In Progress", color: "amber", tasks: [] },
-  { id: "review", title: "In Review", color: "purple", tasks: [] },
-  { id: "done", title: "Done", color: "green", tasks: [] },
-]
+import type { Task, Column } from "@/features/tasks/types/tasks.types"
+import { useTasks, useColumns, useUpdateTask, useUpdateColumn } from "@/features/tasks/api/tasks.queries"
 
 interface KanbanBoardProps {
   project: Project
 }
 
 export function KanbanBoard({ project }: KanbanBoardProps) {
-  const [columns, setColumns] = useState<Column[]>(emptyColumns)
+  const { data: columns, isLoading: columnsLoading } = useColumns(project.id)
+  const { data: tasks, isLoading: tasksLoading } = useTasks({ projectId: project.id })
+  const updateTask = useUpdateTask()
+  const updateColumn = useUpdateColumn()
 
-  // Task Drag State
-  const [draggedTask, setDraggedTask] = useState<Task | null>(null)
-  const [sourceColumnId, setSourceColumnId] = useState<string | null>(null)
+  // Edit panel state
+  const [editPanelOpen, setEditPanelOpen] = useState(false)
+  const [editingTask, setEditingTask] = useState<Task | null>(null)
 
-  const handleDragStart = (task: Task, columnId: string) => {
-    setDraggedTask(task)
-    setSourceColumnId(columnId)
+  // Column order (from API, draggable locally)
+  const [columnOrder, setColumnOrder] = useState<Column[] | null>(null)
+
+  // Use API columns sorted by order, or local reordered state
+  const orderedColumns = useMemo(() => {
+    if (columnOrder !== null) return columnOrder
+    if (!columns) return []
+    return [...columns].sort((a, b) => a.order - b.order)
+  }, [columns, columnOrder])
+
+  // When new columns arrive from API, reset local order
+  useMemo(() => {
+    if (columns) setColumnOrder(null)
+  }, [columns])
+
+  // Group tasks by columnId
+  const tasksByColumn = useMemo(() => {
+    const grouped: Record<number, Task[]> = {}
+    if (tasks) {
+      tasks.forEach((task) => {
+        if (!grouped[task.columnId]) grouped[task.columnId] = []
+        grouped[task.columnId].push(task)
+      })
+    }
+    return grouped
+  }, [tasks])
+
+  // Drag task to another column → update columnId
+  const handleTaskDrop = (taskId: number, targetColumnId: number) => {
+    const task = tasks?.find((t) => t.id === taskId)
+    if (!task || task.columnId === targetColumnId) return
+    updateTask.mutate({ id: taskId, data: { columnId: targetColumnId } })
   }
 
-  const handleDragEnd = () => {
-    setDraggedTask(null)
-    setSourceColumnId(null)
+  const handleEditTask = (task: Task) => {
+    setEditingTask(task)
+    setEditPanelOpen(true)
   }
 
-  const handleDrop = (targetColumnId: string, targetTaskId?: string, position?: "top" | "bottom") => {
-    if (!draggedTask || !sourceColumnId) return
-    if (sourceColumnId === targetColumnId && targetTaskId === draggedTask.id) return
+  const handleClosePanel = () => {
+    setEditPanelOpen(false)
+    setEditingTask(null)
+  }
 
-    setColumns((prevColumns) => {
-      // First, remove task from source column
-      const columnsAfterRemove = prevColumns.map((column) => {
-        if (column.id === sourceColumnId) {
-          return {
-            ...column,
-            tasks: column.tasks.filter((task) => task.id !== draggedTask.id),
-          }
-        }
-        return column
-      })
-
-      // Then add into target column
-      return columnsAfterRemove.map((column) => {
-        if (column.id === targetColumnId) {
-          const newTasks = [...column.tasks]
-          if (targetTaskId) {
-            const index = newTasks.findIndex((t) => t.id === targetTaskId)
-            if (index !== -1) {
-              const insertIndex = position === "bottom" ? index + 1 : index
-              newTasks.splice(insertIndex, 0, draggedTask)
-            } else {
-              newTasks.push(draggedTask)
-            }
-          } else {
-            newTasks.push(draggedTask)
-          }
-
-          // Stable sort by priority
-          newTasks.sort((a, b) => {
-            const weightA = PRIORITY_WEIGHT[a.priority as keyof typeof PRIORITY_WEIGHT] || 0
-            const weightB = PRIORITY_WEIGHT[b.priority as keyof typeof PRIORITY_WEIGHT] || 0
-            return weightB - weightA // descending
-          })
-
-          return { ...column, tasks: newTasks }
-        }
-        return column
-      })
+  // Handle column reordering — update order values via API
+  const handleColumnsReorder = (newOrder: Column[]) => {
+    setColumnOrder(newOrder)
+    // Update order for each column that changed position
+    newOrder.forEach((col, idx) => {
+      if (col.order !== idx) {
+        updateColumn.mutate({
+          projectId: project.id,
+          columnId: col.id,
+          data: { order: idx },
+        })
+      }
     })
+  }
 
-    handleDragEnd()
+  if (columnsLoading || tasksLoading) {
+    return (
+      <div className="flex items-center justify-center h-full">
+        <Loader2 className="h-6 w-6 text-zinc-600 animate-spin" />
+      </div>
+    )
   }
 
   return (
@@ -95,35 +99,46 @@ export function KanbanBoard({ project }: KanbanBoardProps) {
         {project.description && (
           <span className="text-[12px] text-zinc-600 ml-1 hidden sm:inline">— {project.description}</span>
         )}
+        <span className="ml-auto text-[11px] text-zinc-600">{tasks?.length ?? 0} tasks</span>
       </div>
 
       {/* Board */}
       <Reorder.Group
         axis="x"
-        values={columns}
-        onReorder={setColumns}
+        values={orderedColumns}
+        onReorder={handleColumnsReorder}
         className="flex flex-1 items-start gap-4 overflow-x-auto p-4"
       >
-        {columns.map((column) => (
+        {orderedColumns.map((column) => (
           <KanbanColumn
             key={column.id}
             column={column}
-            onDragStart={handleDragStart}
-            onDragEnd={handleDragEnd}
-            onDrop={handleDrop}
-            isDraggingBoard={!!draggedTask}
-            draggedTask={draggedTask}
+            tasks={tasksByColumn[column.id] || []}
+            onEditTask={handleEditTask}
+            onDropTask={(taskId) => handleTaskDrop(taskId, column.id)}
+            projectId={project.id}
+            members={project.members}
           />
         ))}
 
         {/* Add column button */}
         <div className="flex-shrink-0">
-          <button className="flex h-10 w-72 items-center justify-start gap-2 rounded-xl border border-dashed border-white/[0.06] bg-white/[0.02] px-4 text-[13px] text-zinc-600 hover:bg-white/[0.04] hover:text-zinc-400 hover:border-white/[0.1] transition-all cursor-pointer">
+          <button className="flex h-10 w-64 items-center justify-start gap-2 rounded-xl border border-dashed border-white/[0.06] bg-white/[0.02] px-4 text-[13px] text-zinc-600 hover:bg-white/[0.04] hover:text-zinc-400 hover:border-white/[0.1] transition-all cursor-pointer">
             <Plus className="h-4 w-4" />
             Add Column
           </button>
         </div>
       </Reorder.Group>
+
+      {/* Task Edit Panel */}
+      <TaskEditPanel
+        open={editPanelOpen}
+        onClose={handleClosePanel}
+        task={editingTask}
+        projectId={project.id}
+        members={project.members}
+        columns={orderedColumns}
+      />
     </div>
   )
 }

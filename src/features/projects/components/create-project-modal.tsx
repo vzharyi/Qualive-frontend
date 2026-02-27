@@ -69,34 +69,31 @@ interface ColumnConfig {
 }
 
 const defaultColumns: ColumnConfig[] = [
-  { id: "todo", title: "To Do", color: "slate" },
-  { id: "in-progress", title: "In Progress", color: "amber" },
-  { id: "review", title: "In Review", color: "purple" },
-  { id: "done", title: "Done", color: "green" },
+  { id: "todo", title: "To Do", color: "#94a3b8" },
+  { id: "in-progress", title: "In Progress", color: "#fbbf24" },
+  { id: "review", title: "In Review", color: "#c084fc" },
+  { id: "done", title: "Done", color: "#34d399" },
 ]
 
-// Маппинг цветов для селектора (левая часть) — ключи совпадают с kanban-column
+// Color palette — HEX values
 const colorOptions = [
-  { value: "slate", label: "Slate", class: "bg-slate-400" },
-  { value: "blue", label: "Blue", class: "bg-blue-400" },
-  { value: "amber", label: "Amber", class: "bg-amber-400" },
-  { value: "green", label: "Green", class: "bg-emerald-500" },
-  { value: "red", label: "Red", class: "bg-red-400" },
-  { value: "purple", label: "Purple", class: "bg-purple-500" },
-  { value: "pink", label: "Pink", class: "bg-pink-400" },
-  { value: "cyan", label: "Cyan", class: "bg-cyan-400" },
+  { value: "#94a3b8", label: "Slate" },
+  { value: "#60a5fa", label: "Blue" },
+  { value: "#fbbf24", label: "Amber" },
+  { value: "#34d399", label: "Green" },
+  { value: "#f87171", label: "Red" },
+  { value: "#c084fc", label: "Purple" },
+  { value: "#f472b6", label: "Pink" },
+  { value: "#22d3ee", label: "Cyan" },
+  { value: "#fb923c", label: "Orange" },
+  { value: "#a78bfa", label: "Violet" },
 ]
 
-// RGB значения для стилизации превью колонок (совпадают с KanbanColumn)
-const columnColorsRGB: Record<string, string> = {
-  slate: "148, 163, 184",
-  blue: "96, 165, 250",
-  amber: "251, 191, 36",
-  green: "52, 211, 153",
-  red: "248, 113, 113",
-  purple: "192, 132, 252",
-  pink: "244, 114, 182",
-  cyan: "34, 211, 238",
+// Convert HEX #rrggbb to "r, g, b" for use in rgba()
+function hexToRGB(hex: string): string {
+  const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex)
+  if (!result) return "148, 163, 184" // fallback slate
+  return `${parseInt(result[1], 16)}, ${parseInt(result[2], 16)}, ${parseInt(result[3], 16)}`
 }
 
 export function CreateProjectModal({ open, onClose }: CreateProjectModalProps) {
@@ -168,6 +165,7 @@ export function CreateProjectModal({ open, onClose }: CreateProjectModalProps) {
       {
         name: name.trim(),
         description: description.trim() || undefined,
+        columns: columns.map((c) => ({ name: c.title, color: c.color })),
       },
       {
         onSuccess: () => {
@@ -240,7 +238,7 @@ export function CreateProjectModal({ open, onClose }: CreateProjectModalProps) {
                         {enabledFeatures.length} selected
                       </span>
                     </div>
-                    
+
                     {/* Кнопки теперь идут оберткой (flex-wrap), а не жесткой сеткой */}
                     <div className="flex flex-wrap gap-2.5">
                       {featureToggles.map((feature) => {
@@ -254,15 +252,15 @@ export function CreateProjectModal({ open, onClose }: CreateProjectModalProps) {
                             className={cn(
                               "flex items-center gap-2 rounded-full border px-3.5 py-1.5 text-[13px] font-medium transition-colors",
                               active
-                                ? "border-emerald-500 text-white" 
+                                ? "border-emerald-500 text-white"
                                 : "border-white/10 text-zinc-400 hover:border-white/20 hover:text-zinc-300",
                             )}
                           >
-                            <Icon 
+                            <Icon
                               className={cn(
                                 "h-4 w-4",
                                 active ? "text-emerald-500" : "text-zinc-400"
-                              )} 
+                              )}
                             />
                             <span>{feature.label}</span>
                           </button>
@@ -295,11 +293,10 @@ export function CreateProjectModal({ open, onClose }: CreateProjectModalProps) {
                         key={column.id}
                         className="flex items-center gap-2 rounded-lg border border-white/10 bg-white/5 p-2"
                       >
+                        {/* Live color dot */}
                         <div
-                          className={cn(
-                            "h-6 w-1.5 rounded-full",
-                            colorOptions.find((c) => c.value === column.color)?.class || "bg-slate-400",
-                          )}
+                          className="h-6 w-1.5 rounded-full flex-shrink-0"
+                          style={{ backgroundColor: column.color }}
                         />
                         <Input
                           value={column.title}
@@ -308,19 +305,25 @@ export function CreateProjectModal({ open, onClose }: CreateProjectModalProps) {
                           }
                           className="h-8 flex-1 bg-transparent border-none text-sm text-zinc-200 focus-visible:ring-0 px-2"
                         />
-                        <select
-                          value={column.color}
-                          onChange={(e) =>
-                            handleChangeColumnColor(column.id, e.target.value)
-                          }
-                          className="h-8 rounded-md bg-white/5 border border-white/10 px-2 text-xs text-zinc-300 focus:outline-none"
-                        >
+                        {/* Color swatches */}
+                        <div className="flex items-center gap-1">
                           {colorOptions.map((opt) => (
-                            <option key={opt.value} value={opt.value} className="bg-[#1e1e1e]">
-                              {opt.label}
-                            </option>
+                            <button
+                              key={opt.value}
+                              type="button"
+                              title={opt.label}
+                              onClick={() => handleChangeColumnColor(column.id, opt.value)}
+                              className="h-4 w-4 rounded-full transition-all cursor-pointer"
+                              style={{
+                                backgroundColor: opt.value,
+                                boxShadow: column.color === opt.value
+                                  ? `0 0 0 2px #131313, 0 0 0 3.5px ${opt.value}`
+                                  : 'none',
+                                transform: column.color === opt.value ? 'scale(1.2)' : 'scale(1)',
+                              }}
+                            />
                           ))}
-                        </select>
+                        </div>
                         <Button
                           type="button"
                           variant="ghost"
@@ -401,7 +404,7 @@ export function CreateProjectModal({ open, onClose }: CreateProjectModalProps) {
             <div className="flex-1 overflow-x-auto pb-4 custom-scrollbar">
               <div className="flex h-full gap-4 w-max">
                 {columns.map((column) => {
-                  const colorRGB = columnColorsRGB[column.color] || columnColorsRGB.slate;
+                  const colorRGB = hexToRGB(column.color)
 
                   return (
                     <div
@@ -459,7 +462,7 @@ export function CreateProjectModal({ open, onClose }: CreateProjectModalProps) {
                                       <span>Mar 24</span>
                                     </div>
                                   )}
-                                  
+
                                   {enabledFeatures.includes("attachments") && (
                                     <div className="flex items-center gap-1">
                                       <Paperclip className="h-3 w-3" />

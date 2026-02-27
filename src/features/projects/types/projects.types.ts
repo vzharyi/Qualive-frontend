@@ -17,15 +17,6 @@ export const ProjectRole = {
 
 export type ProjectRole = (typeof ProjectRole)[keyof typeof ProjectRole]
 
-export const TaskPriority = {
-    LOW: 'LOW',
-    MEDIUM: 'MEDIUM',
-    HIGH: 'HIGH',
-    CRITICAL: 'CRITICAL',
-} as const
-
-export type TaskPriority = (typeof TaskPriority)[keyof typeof TaskPriority]
-
 // ─── Project Member ───
 export const projectMemberSchema = z.object({
     id: z.number(),
@@ -62,6 +53,12 @@ export const createProjectSchema = z.object({
         .max(100, 'Project name must be at most 100 characters'),
     description: z.string().max(500, 'Description must be at most 500 characters').optional(),
     avatarUrl: z.string().url('Invalid URL').optional().or(z.literal('')),
+    columns: z.array(
+        z.object({
+            name: z.string().min(1),
+            color: z.string().optional(),
+        })
+    ).optional(),
 })
 
 export type CreateProjectDto = z.infer<typeof createProjectSchema>
@@ -88,15 +85,3 @@ export const addMemberSchema = z.object({
 
 export type AddMemberDto = z.infer<typeof addMemberSchema>
 
-// ─── Create Task in Project ───
-export const createTaskInProjectSchema = z.object({
-    title: z
-        .string()
-        .min(1, 'Task title is required')
-        .max(100, 'Task title must be at most 100 characters'),
-    description: z.string().optional(),
-    assigneeId: z.number().optional(),
-    priority: z.string().optional(),
-})
-
-export type CreateTaskInProjectDto = z.infer<typeof createTaskInProjectSchema>

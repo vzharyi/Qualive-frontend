@@ -5,7 +5,6 @@ import type {
     UpdateProjectDto,
     AddMemberDto,
     ProjectMember,
-    CreateTaskInProjectDto,
 } from '../types/projects.types'
 
 export const projectsApi = {
@@ -43,10 +42,5 @@ export const projectsApi = {
     removeMember: async (projectId: number, userId: number): Promise<void> => {
         await api.delete(`/projects/${projectId}/members/${userId}`)
     },
-
-    // ─── Tasks ───
-    createTask: async (projectId: number, data: CreateTaskInProjectDto) => {
-        const response = await api.post(`/projects/${projectId}/tasks`, data)
-        return response.data
-    },
 }
+
