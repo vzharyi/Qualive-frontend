@@ -41,13 +41,13 @@ export function AppHeader({ sidebarOpen, onToggleSidebar }: AppHeaderProps) {
   }
 
   const userInitials = user
-    ? `${user.firstName?.charAt(0) || ""}${user.lastName?.charAt(0) || ""}`.toUpperCase() || user.login.charAt(0).toUpperCase()
+    ? (`${user.firstName?.charAt(0) || ""}${user.lastName?.charAt(0) || ""}` || user.login?.charAt(0) || "?").toUpperCase()
     : "?"
 
   const userDisplayName = user
-    ? user.firstName && user.lastName
-      ? `${user.firstName} ${user.lastName}`
-      : user.login
+    ? user.firstName || user.lastName
+      ? `${user.firstName || ""} ${user.lastName || ""}`.trim()
+      : user.login || "User"
     : "User"
 
   return (

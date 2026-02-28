@@ -1,17 +1,43 @@
 import { useState } from "react"
-import { useParams, Navigate } from "react-router-dom"
+import { useParams, Navigate, useSearchParams } from "react-router-dom"
 import { AppSidebar } from "@/components/layout/app-sidebar"
 import { AppHeader } from "@/components/layout/app-header"
 import { AppToolbar } from "@/components/layout/app-toolbar"
 import { KanbanBoard } from "@/features/board/components/kanban-board"
 import { useProject } from "@/features/projects/api/projects.queries"
 import { Loader2 } from "lucide-react"
+import { useEffect } from "react"
+import { useToast } from "@/hooks/use-toast"
 
 export default function BoardPage() {
   const { id } = useParams()
   const projectId = Number(id)
   const [sidebarOpen, setSidebarOpen] = useState(true)
+  const [searchParams, setSearchParams] = useSearchParams()
   const { data: project, isLoading, isError } = useProject(projectId)
+  const { toast } = useToast()
+
+  // Handle GitHub App redirect statuses
+  useEffect(() => {
+    if (searchParams.get("github") === "connected") {
+      toast({
+        title: "GitHub App connected!",
+        description: "Your repositories are now available to link.",
+      })
+      // Clean up URL
+      setSearchParams(new URLSearchParams())
+    } else if (searchParams.get("error")) {
+      const error = searchParams.get("error")
+      toast({
+        title: "GitHub Connection Failed",
+        description: error === "missing_state"
+          ? "Invalid request state."
+          : "Could not connect to GitHub. Please try again.",
+      })
+      // Clean up URL
+      setSearchParams(new URLSearchParams())
+    }
+  }, [searchParams, setSearchParams, toast])
 
   if (!id || isNaN(projectId)) {
     return <Navigate to="/dashboard" replace />
