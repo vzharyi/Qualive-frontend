@@ -48,11 +48,48 @@ export function KanbanBoard({ project }: KanbanBoardProps) {
     return grouped
   }, [tasks])
 
-  // Drag task to another column → update columnId
-  const handleTaskDrop = (taskId: number, targetColumnId: number) => {
-    const task = tasks?.find((t) => t.id === taskId)
-    if (!task || task.columnId === targetColumnId) return
-    updateTask.mutate({ id: taskId, data: { columnId: targetColumnId } })
+  // Drag task to another column or reorder → update columnId and order
+  const handleTaskDrop = (taskId: number, targetColumnId: number, beforeId: number | null) => {
+    if (!tasks) return
+    const activeTask = tasks.find((t) => t.id === taskId)
+    if (!activeTask) return
+
+    // 1) Find current tasks in target column
+    let columnTasks = tasks.filter((t) => t.columnId === targetColumnId)
+
+    // 2) Remove activeTask if it's already in the target column
+    if (activeTask.columnId === targetColumnId) {
+      columnTasks = columnTasks.filter((t) => t.id !== taskId)
+    }
+
+    // 3) Insert activeTask before beforeId
+    const insertIndex = beforeId
+      ? columnTasks.findIndex((t) => t.id === beforeId)
+      : columnTasks.length
+
+    // If beforeId was not found (shouldn't happen unless out of sync), put at end
+    const finalIndex = insertIndex >= 0 ? insertIndex : columnTasks.length
+    columnTasks.splice(finalIndex, 0, activeTask)
+
+    // 4) Filter down to tasks with the SAME priority as the dropped task
+    // The "order" is calculated relatively within the same priority group
+    const samePriorityTasks = columnTasks.filter((t) => t.priority === activeTask.priority)
+
+    // 5) Update order for tasks that changed position
+    samePriorityTasks.forEach((task, index) => {
+      const isDraggedTask = task.id === activeTask.id
+      const hasOrderChanged = (task.order ?? 0) !== index
+
+      if (isDraggedTask || hasOrderChanged) {
+        updateTask.mutate({
+          id: task.id,
+          data: {
+            columnId: targetColumnId,
+            order: index,
+          },
+        })
+      }
+    })
   }
 
   const handleEditTask = (task: Task) => {
@@ -114,8 +151,8 @@ export function KanbanBoard({ project }: KanbanBoardProps) {
             key={column.id}
             column={column}
             tasks={tasksByColumn[column.id] || []}
-            onEditTask={handleEditTask}
-            onDropTask={(taskId) => handleTaskDrop(taskId, column.id)}
+            onOpenPanel={handleEditTask}
+            onDropTask={(taskId, beforeId) => handleTaskDrop(taskId, column.id, beforeId)}
             projectId={project.id}
             members={project.members}
           />

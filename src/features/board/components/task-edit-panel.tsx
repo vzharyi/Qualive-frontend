@@ -4,6 +4,7 @@ import { Columns3, Flag, Users, CalendarDays, GitCommitHorizontal } from 'lucide
 import type { Task, Column } from '@/features/tasks/types/tasks.types'
 import type { ProjectMember } from '@/features/projects/types/projects.types'
 import { useUpdateTask } from '@/features/tasks/api/tasks.queries'
+import { TaskGithubSection } from './task-github-section'
 
 const PRIORITIES = [
     { value: 'HIGH', label: 'High', dot: 'bg-red-500', text: 'text-red-400', bg: 'bg-red-500/15' },
@@ -281,8 +282,16 @@ export function TaskEditPanel({
                                 value={description}
                                 onChange={(e) => handleDescriptionChange(e.target.value)}
                                 placeholder="Write your notes here..."
-                                className="w-full bg-transparent text-[14px] text-zinc-300 placeholder:text-zinc-600 focus:outline-none resize-none leading-relaxed min-h-[200px]"
+                                className="w-full bg-transparent text-[14px] text-zinc-300 placeholder:text-zinc-600 focus:outline-none resize-none leading-relaxed min-h-[120px]"
                             />
+
+                            {/* GitHub Items section — only when editing existing task */}
+                            {isEditing && task && (
+                                <>
+                                    <div className="border-t border-white/[0.06] my-5" />
+                                    <TaskGithubSection taskId={task.id} projectId={task.projectId} />
+                                </>
+                            )}
                         </div>
                     </motion.div>
                 </>

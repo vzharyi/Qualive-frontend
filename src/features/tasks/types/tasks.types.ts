@@ -48,6 +48,7 @@ export const taskSchema = z.object({
     assigneeId: z.number().nullable().optional(),
     reporterId: z.number().nullable().optional(),
     priority: z.string().nullable().optional(),
+    order: z.number().optional(),
     githubCommitHash: z.string().nullable().optional(),
     linesOfCode: z.number().nullable().optional(),
     createdAt: z.string(),
@@ -81,6 +82,7 @@ export const createTaskSchema = z.object({
     description: z.string().optional(),
     assigneeId: z.number().optional(),
     priority: z.string().optional(),
+    order: z.number().optional(),
     columnId: z.number(),
 })
 
@@ -92,6 +94,7 @@ export const updateTaskSchema = z.object({
     description: z.string().optional(),
     assigneeId: z.number().nullable().optional(),
     priority: z.string().optional(),
+    order: z.number().optional(),
     columnId: z.number().optional(),
     githubCommitHash: z.string().optional(),
 })

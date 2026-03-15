@@ -6,28 +6,35 @@ import { cn } from "@/lib/utils"
 import { Pencil } from "lucide-react"
 import type { Task } from "@/features/tasks/types/tasks.types"
 
+declare global {
+  interface Window {
+    __draggingTaskPriority?: string
+    __draggingTaskId?: string
+  }
+}
+
 interface TaskCardProps {
   task: Task
   colorRGB?: string
-  columnId: string
   onEditTask: (task: Task) => void
+  onOpenPanel: (task: Task) => void
 }
 
-export function TaskCard({ task, colorRGB, columnId, onEditTask }: TaskCardProps) {
+export function TaskCard({ task, colorRGB, onEditTask, onOpenPanel }: TaskCardProps) {
   const [isDragging, setIsDragging] = useState(false)
   const dragGhostRef = useRef<HTMLElement | null>(null)
   const dragOffset = useRef({ x: 0, y: 0 })
 
-  const getPriorityColor = (priority?: string | null) => {
+  const getPriorityStyle = (priority?: string | null) => {
     switch (priority) {
       case "HIGH":
-        return "bg-red-500"
+        return "bg-red-500/10 text-red-500 border-red-500/20"
       case "MEDIUM":
-        return "bg-amber-500"
+        return "bg-amber-500/10 text-amber-500 border-amber-500/20"
       case "LOW":
-        return "bg-zinc-500"
+        return "bg-zinc-500/10 text-zinc-400 border-zinc-500/20"
       default:
-        return "bg-zinc-600"
+        return "bg-white/5 text-zinc-500 border-white/10"
     }
   }
 
@@ -101,6 +108,13 @@ export function TaskCard({ task, colorRGB, columnId, onEditTask }: TaskCardProps
     }
   }, [])
 
+  const mockScore = 40 + ((task.id * 17) % 61)
+  const getScoreStyle = (score: number) => {
+    if (score >= 80) return "text-emerald-400 bg-emerald-500/10 ring-emerald-500/20"
+    if (score >= 50) return "text-amber-400 bg-amber-500/10 ring-amber-500/20"
+    return "text-red-400 bg-red-500/10 ring-red-500/20"
+  }
+
   // Assignee display
   const assigneeName = task.assignee
     ? task.assignee.firstName && task.assignee.lastName
@@ -115,11 +129,23 @@ export function TaskCard({ task, colorRGB, columnId, onEditTask }: TaskCardProps
   return (
     <div
       draggable
-      onDragStart={handleDragStart}
+      onDragStart={(e) => {
+        handleDragStart(e)
+        // Store the priority globally during the drag so dragOver can read it securely
+        window.__draggingTaskPriority = task.priority || "none"
+        window.__draggingTaskId = task.id.toString()
+        // Ensure dataTransfer has the taskId
+        e.dataTransfer.setData("taskId", task.id.toString())
+      }}
       onDrag={handleDrag}
-      onDragEnd={handleDragEnd}
+      onDragEnd={() => {
+        handleDragEnd()
+        window.__draggingTaskPriority = undefined
+        window.__draggingTaskId = undefined
+      }}
+      data-priority={task.priority || "none"}
       className={cn(
-        "group relative cursor-grab rounded-xl border p-3.5 transition-all hover:brightness-110",
+        "group relative cursor-pointer rounded-xl border p-3.5 transition-all hover:brightness-110",
         isDragging && "opacity-50 cursor-grabbing scale-[0.98]",
       )}
       style={{
@@ -128,6 +154,7 @@ export function TaskCard({ task, colorRGB, columnId, onEditTask }: TaskCardProps
           : "#181818",
         borderColor: colorRGB ? `rgba(${colorRGB}, 0.12)` : "rgba(255,255,255,0.06)",
       }}
+      onClick={() => onOpenPanel(task)}
     >
       {/* Quick edit button */}
       <button
@@ -135,17 +162,17 @@ export function TaskCard({ task, colorRGB, columnId, onEditTask }: TaskCardProps
           e.stopPropagation()
           onEditTask(task)
         }}
-        className="absolute right-2 top-2 flex h-6 w-6 items-center justify-center rounded-md bg-white/[0.06] opacity-0 transition-opacity group-hover:opacity-100 hover:bg-white/[0.1] cursor-pointer"
+        className="absolute right-2 top-2 z-10 flex h-6 w-6 items-center justify-center rounded-md bg-[#181818] opacity-0 transition-opacity group-hover:opacity-100 hover:bg-zinc-800 cursor-pointer border border-white/10 shadow-sm"
       >
         <Pencil className="h-3 w-3 text-zinc-400" />
       </button>
 
       {/* Title */}
-      <h4 className="mb-2 pr-6 text-[13px] font-medium leading-snug text-zinc-200">{task.title}</h4>
+      <h4 className="mb-3 pr-6 text-[16px] font-semibold leading-snug text-zinc-100">{task.title}</h4>
 
       {/* Assignee */}
       {assigneeName && (
-        <div className="flex items-center gap-2 mb-2">
+        <div className="flex items-center gap-2 mb-3">
           <Avatar className="h-5 w-5 ring-1 ring-white/[0.06]">
             {task.assignee?.avatarUrl && <AvatarImage src={task.assignee.avatarUrl} alt={assigneeName} />}
             <AvatarFallback className="text-[9px] bg-zinc-800 text-zinc-500">{assigneeInitial}</AvatarFallback>
@@ -155,19 +182,27 @@ export function TaskCard({ task, colorRGB, columnId, onEditTask }: TaskCardProps
       )}
 
       {/* Bottom row */}
-      <div className="mt-2 flex items-center justify-between text-[11px] text-zinc-600">
-        <span className="text-[10px] text-zinc-600">
-          #{task.id}
-        </span>
-        <div className="flex items-center gap-2">
-          {/* Priority indicator */}
-          <div className="flex items-center gap-1">
-            <div
-              className={cn("h-2 w-2 rounded-full", getPriorityColor(task.priority))}
-              title={`Priority: ${getPriorityLabel(task.priority)}`}
-            />
-            <span className="text-[10px]">{getPriorityLabel(task.priority)}</span>
+      <div className="mt-3 flex items-center justify-between text-[11px] text-zinc-600">
+        <div className="flex flex-wrap items-center gap-2">
+          {/* Task ID Badge */}
+          <div className="flex h-5 items-center rounded border border-white/5 bg-white/5 px-1.5 text-[10px] font-mono font-medium text-zinc-400">
+            #{task.id}
           </div>
+          {/* Priority Badge */}
+          <div className={cn(
+            "flex h-5 items-center rounded border px-1.5 text-[10px] font-bold uppercase tracking-wider",
+            getPriorityStyle(task.priority)
+          )}>
+            {getPriorityLabel(task.priority)}
+          </div>
+        </div>
+
+        {/* Task Score */}
+        <div 
+          className={cn("flex shrink-0 h-6 w-6 items-center justify-center rounded-full ring-1 text-[9px] font-bold shadow-sm", getScoreStyle(mockScore))}
+          title="Task Health Score"
+        >
+          {mockScore}
         </div>
       </div>
     </div>
