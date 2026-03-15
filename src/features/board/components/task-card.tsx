@@ -47,7 +47,7 @@ export function TaskCard({ task, colorRGB, onEditTask, onOpenPanel }: TaskCardPr
       case "LOW":
         return "Low"
       default:
-        return "—"
+        return null
     }
   }
 
@@ -189,12 +189,14 @@ export function TaskCard({ task, colorRGB, onEditTask, onOpenPanel }: TaskCardPr
             #{task.id}
           </div>
           {/* Priority Badge */}
-          <div className={cn(
-            "flex h-5 items-center rounded border px-1.5 text-[10px] font-bold uppercase tracking-wider",
-            getPriorityStyle(task.priority)
-          )}>
-            {getPriorityLabel(task.priority)}
-          </div>
+          {task.priority && (
+            <div className={cn(
+              "flex h-5 items-center rounded border px-1.5 text-[10px] font-bold uppercase tracking-wider",
+              getPriorityStyle(task.priority)
+            )}>
+              {getPriorityLabel(task.priority)}
+            </div>
+          )}
         </div>
 
         {/* Task Score */}

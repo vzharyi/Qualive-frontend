@@ -65,4 +65,9 @@ export const tasksApi = {
     deleteColumn: async (projectId: number, columnId: number): Promise<void> => {
         await api.delete(`/projects/${projectId}/columns/${columnId}`)
     },
+
+    // DELETE /tasks/column/:columnId
+    deleteColumnTasks: async (columnId: number): Promise<void> => {
+        await api.delete(`/tasks/column/${columnId}`)
+    },
 }

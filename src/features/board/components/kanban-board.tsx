@@ -2,7 +2,7 @@ import { useState, useMemo } from "react"
 import { KanbanColumn } from "@/features/board/components/kanban-column"
 import { TaskEditPanel } from "@/features/board/components/task-edit-panel"
 import { Reorder } from "framer-motion"
-import { Plus, Loader2 } from "lucide-react"
+import { Loader2 } from "lucide-react"
 import type { Project } from "@/features/projects/types/projects.types"
 import type { Task, Column } from "@/features/tasks/types/tasks.types"
 import { useTasks, useColumns, useUpdateTask, useUpdateColumn } from "@/features/tasks/api/tasks.queries"
@@ -158,13 +158,6 @@ export function KanbanBoard({ project }: KanbanBoardProps) {
           />
         ))}
 
-        {/* Add column button */}
-        <div className="flex-shrink-0">
-          <button className="flex h-10 w-64 items-center justify-start gap-2 rounded-xl border border-dashed border-white/[0.06] bg-white/[0.02] px-4 text-[13px] text-zinc-600 hover:bg-white/[0.04] hover:text-zinc-400 hover:border-white/[0.1] transition-all cursor-pointer">
-            <Plus className="h-4 w-4" />
-            Add Column
-          </button>
-        </div>
       </Reorder.Group>
 
       {/* Task Edit Panel */}

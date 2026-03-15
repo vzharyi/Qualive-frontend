@@ -2,7 +2,9 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Trash2, Palette } from 'lucide-react'
 import type { Task, Column } from '@/features/tasks/types/tasks.types'
-import { useUpdateColumn, useDeleteTask } from '@/features/tasks/api/tasks.queries'
+import { useUpdateColumn, useDeleteColumnTasks } from '@/features/tasks/api/tasks.queries'
+import { useAuth } from '@/features/auth/store/auth.store'
+import type { ProjectMember } from '@/features/projects/types/projects.types'
 import { cn } from '@/lib/utils'
 
 const PRESET_COLORS = ["#94a3b8", "#fbbf24", "#fb923c", "#f87171", "#c084fc", "#60a5fa", "#34d399"]
@@ -14,6 +16,7 @@ interface ColumnEditPanelProps {
     projectId: number
     tasks: Task[]
     anchorRect?: DOMRect | null
+    members: ProjectMember[]
 }
 
 export function ColumnEditPanel({
@@ -23,10 +26,17 @@ export function ColumnEditPanel({
     projectId,
     tasks,
     anchorRect,
+    members,
 }: ColumnEditPanelProps) {
+    const { user } = useAuth()
     const [name, setName] = useState(column.name)
     const updateColumn = useUpdateColumn()
-    const deleteTask = useDeleteTask()
+    const deleteBatch = useDeleteColumnTasks()
+
+    // Role check: Admin-only for bulk deletion
+    const currentMember = members.find(m => m.userId === user?.id)
+    const isOwner = currentMember?.role?.toUpperCase() === 'ADMIN'
+
 
     const hasChanges = useRef(false)
     const debounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -74,8 +84,9 @@ export function ColumnEditPanel({
     }
 
     const onDeleteAllTasks = () => {
+        if (!isOwner) return
         if (window.confirm(`Are you sure you want to delete all ${tasks.length} tasks in "${column.name}"?`)) {
-            tasks.forEach(t => deleteTask.mutate(t.id))
+            deleteBatch.mutate(column.id)
             handleClose()
         }
     }
@@ -150,20 +161,25 @@ export function ColumnEditPanel({
                                 </div>
                             </div>
 
-                            {/* Actions Row */}
-                            <div className="space-y-3">
-                                <div className="flex items-center gap-1.5 text-[11px] font-medium uppercase tracking-wider text-zinc-500">
-                                    <Trash2 className="h-3.5 w-3.5" />
-                                    Actions
+                            {/* Actions Row - Only for Owner/Admin */}
+                            {isOwner && (
+                                <div className="space-y-3">
+                                    <div className="flex items-center gap-1.5 text-[11px] font-medium uppercase tracking-wider text-zinc-500">
+                                        <Trash2 className="h-3.5 w-3.5" />
+                                        Actions
+                                    </div>
+                                    <button
+                                        onClick={onDeleteAllTasks}
+                                        disabled={deleteBatch.isPending}
+                                        className="w-full flex items-center justify-between px-3 py-2 rounded-lg bg-red-500/5 text-red-400 hover:bg-red-500/10 transition-colors border border-red-500/10 text-[12px] font-medium disabled:opacity-50"
+                                    >
+                                        <span>Delete all tasks</span>
+                                        <span className="text-[10px] opacity-60 tabular-nums">
+                                            {deleteBatch.isPending ? 'Deleting...' : tasks.length}
+                                        </span>
+                                    </button>
                                 </div>
-                                <button
-                                    onClick={onDeleteAllTasks}
-                                    className="w-full flex items-center justify-between px-3 py-2 rounded-lg bg-red-500/5 text-red-400 hover:bg-red-500/10 transition-colors border border-red-500/10 text-[12px] font-medium"
-                                >
-                                    <span>Delete all tasks</span>
-                                    <span className="text-[10px] opacity-60 tabular-nums">{tasks.length}</span>
-                                </button>
-                            </div>
+                            )}
                         </div>
                     </motion.div>
                 </>

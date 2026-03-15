@@ -4,7 +4,7 @@ import { TaskCard } from "@/features/board/components/task-card"
 import { Plus, Pencil, Search, Users, CircleDot, X, Settings } from "lucide-react"
 import type { Task, Column } from "@/features/tasks/types/tasks.types"
 import type { ProjectMember } from "@/features/projects/types/projects.types"
-import { useCreateTask, useUpdateTask } from "@/features/tasks/api/tasks.queries"
+import { useCreateTask, useUpdateTask, useUpdateColumn } from "@/features/tasks/api/tasks.queries"
 import { cn } from "@/lib/utils"
 // import { ColorPicker } from "@/components/ui/color-picker"
 import { ColumnEditPanel } from "./column-edit-panel"
@@ -66,6 +66,25 @@ export function KanbanColumn({
 
   const createTask = useCreateTask()
   const updateTask = useUpdateTask()
+  const updateColumn = useUpdateColumn()
+
+  // Inline column rename state
+  const [isEditingName, setIsEditingName] = useState(false)
+  const [nameValue, setNameValue] = useState(column.name)
+  const nameSizerRef = useRef<HTMLSpanElement>(null)
+
+  // Auto-focus and select-all when editing starts
+  useEffect(() => {
+    if (isEditingName && nameSizerRef.current) {
+      const el = nameSizerRef.current
+      el.focus()
+      const range = document.createRange()
+      range.selectNodeContents(el)
+      const sel = window.getSelection()
+      sel?.removeAllRanges()
+      sel?.addRange(range)
+    }
+  }, [isEditingName])
 
   // Inline task edit state
   const [editingTask, setEditingTask] = useState<Task | null>(null)
@@ -105,6 +124,21 @@ export function KanbanColumn({
     setEditAssigneeId(null)
     setShowEditPriorityPicker(false)
     setShowEditAssigneePicker(false)
+  }
+
+  const handleNameSave = (text: string) => {
+    setIsEditingName(false)
+    const trimmed = text.trim()
+    if (!trimmed || trimmed === column.name) {
+      setNameValue(column.name)
+      return
+    }
+    setNameValue(trimmed)
+    updateColumn.mutate({
+      projectId,
+      columnId: column.id,
+      data: { name: trimmed },
+    })
   }
 
   const handleEditSave = () => {
@@ -344,19 +378,53 @@ export function KanbanColumn({
       <div
         className="flex items-center justify-between mb-3 px-1 touch-none cursor-grab active:cursor-grabbing"
         onPointerDown={(e) => {
-          e.preventDefault()
-          dragControls.start(e)
+          if (!isEditingName) {
+            e.preventDefault()
+            dragControls.start(e)
+          }
         }}
       >
         {/* Left: colored name pill + count badge */}
         <div className="flex items-center gap-2">
-          {/* Name pill — static colored pill (was clickable/editable) */}
+          {/* Name pill — click to edit, blocks drag propagation */}
           <div
-            className="flex items-center gap-2 rounded-full px-3 py-1.5 text-[13px] font-medium"
+            className="flex items-center gap-2 rounded-full px-3 py-1.5 text-[13px] font-medium cursor-text"
             style={{ backgroundColor: `rgba(${colorRGB}, 0.12)`, color: `rgb(${colorRGB})` }}
+            onPointerDown={(e) => e.stopPropagation()}
+            onClick={() => {
+              if (!isEditingName) setIsEditingName(true)
+            }}
           >
             <div className="h-2 w-2 rounded-full flex-shrink-0" style={{ backgroundColor: `rgb(${colorRGB})` }} />
-            <span>{column.name}</span>
+            <span className="relative inline-flex items-center">
+              {isEditingName ? (
+                <span
+                  ref={nameSizerRef}
+                  contentEditable
+                  suppressContentEditableWarning
+                  onBlur={(e) => {
+                    handleNameSave(e.currentTarget.textContent || "")
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault()
+                      handleNameSave(nameSizerRef.current?.textContent || "")
+                      nameSizerRef.current?.blur()
+                    }
+                    if (e.key === "Escape") {
+                      if (nameSizerRef.current) nameSizerRef.current.textContent = column.name
+                      setNameValue(column.name)
+                      setIsEditingName(false)
+                    }
+                  }}
+                  className="bg-transparent text-[13px] font-medium focus:outline-none min-w-[1ch] whitespace-pre"
+                >
+                  {nameValue}
+                </span>
+              ) : (
+                <span>{column.name}</span>
+              )}
+            </span>
           </div>
 
           {/* Task count — separate badge */}
@@ -727,6 +795,7 @@ export function KanbanColumn({
         projectId={projectId}
         tasks={tasks}
         anchorRect={anchorRect}
+        members={members}
       />
     </Reorder.Item>
   )

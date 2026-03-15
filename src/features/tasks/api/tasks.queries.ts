@@ -128,3 +128,13 @@ export function useDeleteColumn() {
         },
     })
 }
+export function useDeleteColumnTasks() {
+    const queryClient = useQueryClient()
+
+    return useMutation({
+        mutationFn: (columnId: number) => tasksApi.deleteColumnTasks(columnId),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: taskKeys.lists() })
+        },
+    })
+}
