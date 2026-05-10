@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { githubItemsApi } from './github-items.api'
+import { taskKeys } from './tasks.queries'
 import type { CreateGithubItemDto } from '../types/github-items.types'
 
 // ─── Query Keys ───
@@ -46,6 +47,7 @@ export function useLinkGithubItem() {
             githubItemsApi.linkItem(taskId, data),
         onSuccess: (newItem) => {
             queryClient.invalidateQueries({ queryKey: githubItemKeys.byTask(newItem.taskId) })
+            queryClient.invalidateQueries({ queryKey: taskKeys.all })
         },
     })
 }
@@ -57,6 +59,7 @@ export function useUnlinkGithubItem() {
         mutationFn: (id: number) => githubItemsApi.unlinkItem(id),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: githubItemKeys.all })
+            queryClient.invalidateQueries({ queryKey: taskKeys.all })
         },
     })
 }

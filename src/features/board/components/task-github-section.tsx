@@ -13,6 +13,7 @@ import {
     CheckCircle2,
     XCircle,
     Clock,
+    Search
 } from 'lucide-react'
 import {
     useTaskGithubItems,
@@ -24,6 +25,7 @@ import {
 import { useAnalysisReports, useAnalysisDefects } from '@/features/analysis/api/analysis.queries'
 import type { TaskGithubItem, GithubPullRequest, GithubCommit } from '@/features/tasks/types/github-items.types'
 import type { AnalysisReport, AnalysisDefect } from '@/features/analysis/types/analysis.types'
+import { cn } from '@/lib/utils'
 
 interface TaskGithubSectionProps {
     taskId: number
@@ -34,24 +36,24 @@ interface TaskGithubSectionProps {
 function ScoreBadge({ score }: { score: number | null }) {
     if (score === null) {
         return (
-            <span className="inline-flex items-center gap-1 rounded-md bg-zinc-500/10 px-2 py-0.5 text-[11px] font-medium text-zinc-500">
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-zinc-700/50 bg-zinc-800/30 px-2 py-0.5 text-[11px] font-medium text-zinc-400">
                 <Clock className="h-3 w-3" />
-                Analyzing…
+                Analyzing
             </span>
         )
     }
 
     const color =
         score >= 80
-            ? 'text-emerald-400 bg-emerald-500/10'
+            ? 'text-emerald-400 border-emerald-500/20 bg-emerald-500/10'
             : score >= 60
-                ? 'text-amber-400 bg-amber-500/10'
-                : 'text-red-400 bg-red-500/10'
+                ? 'text-amber-400 border-amber-500/20 bg-amber-500/10'
+                : 'text-red-400 border-red-500/20 bg-red-500/10'
 
     const Icon = score >= 80 ? CheckCircle2 : score >= 60 ? AlertTriangle : XCircle
 
     return (
-        <span className={`inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-[11px] font-semibold ${color}`}>
+        <span className={`inline-flex items-center gap-1.5 rounded-full border px-2 py-0.5 text-[11px] font-semibold ${color}`}>
             <Icon className="h-3 w-3" />
             {score}
         </span>
@@ -64,21 +66,24 @@ function DefectsList({ reportId }: { reportId: number }) {
 
     if (isLoading) {
         return (
-            <div className="flex items-center gap-2 py-2 pl-4 text-[11px] text-zinc-500">
-                <Loader2 className="h-3 w-3 animate-spin" />
-                Loading defects…
+            <div className="flex items-center gap-2 py-3 pl-12 text-[12px] text-zinc-500">
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                Analyzing code quality...
             </div>
         )
     }
 
     if (!defects?.length) {
         return (
-            <div className="py-2 pl-4 text-[11px] text-zinc-500">No defects found ✓</div>
+            <div className="py-3 pl-12 text-[12px] text-zinc-500 flex items-center gap-2">
+                <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500/70" />
+                No defects found. Code looks solid.
+            </div>
         )
     }
 
     return (
-        <div className="mt-1 space-y-1 pl-4">
+        <div className="mt-2 space-y-1.5 pl-12 pr-4 pb-3">
             {defects.map((d) => (
                 <DefectRow key={d.id} defect={d} />
             ))}
@@ -87,7 +92,14 @@ function DefectsList({ reportId }: { reportId: number }) {
 }
 
 function DefectRow({ defect }: { defect: AnalysisDefect }) {
-    const severityColor =
+    const severityBorder =
+        defect.severity === 'ERROR'
+            ? 'border-l-red-500/50 bg-red-500/[0.02]'
+            : defect.severity === 'WARNING'
+                ? 'border-l-amber-500/50 bg-amber-500/[0.02]'
+                : 'border-l-blue-500/50 bg-blue-500/[0.02]'
+
+    const severityText =
         defect.severity === 'ERROR'
             ? 'text-red-400'
             : defect.severity === 'WARNING'
@@ -95,18 +107,19 @@ function DefectRow({ defect }: { defect: AnalysisDefect }) {
                 : 'text-blue-400'
 
     return (
-        <div className="flex items-start gap-2 rounded-md bg-white/[0.02] px-2.5 py-1.5 text-[11px]">
-            <span className={`mt-0.5 shrink-0 font-mono font-semibold uppercase ${severityColor}`}>
-                {defect.severity.charAt(0)}
+        <div className={`flex items-start gap-3 rounded-r-lg border border-l-2 border-y-white/[0.04] border-r-white/[0.04] px-3 py-2 ${severityBorder}`}>
+            <span className={`mt-0.5 shrink-0 font-mono text-[10px] font-bold tracking-wider ${severityText}`}>
+                {defect.severity.substring(0, 3)}
             </span>
             <div className="min-w-0 flex-1">
-                <p className="text-zinc-300 leading-snug">{defect.message}</p>
-                <p className="mt-0.5 font-mono text-zinc-600">
-                    {defect.filePath}:{defect.lineNumber}
-                </p>
+                <p className="text-[12px] text-zinc-300 leading-relaxed">{defect.message}</p>
+                <div className="mt-1 flex items-center gap-2 font-mono text-[10px] text-zinc-500">
+                    <span className="truncate">{defect.filePath}</span>
+                    <span className="shrink-0 text-zinc-600">line {defect.lineNumber}</span>
+                </div>
             </div>
-            <span className="shrink-0 rounded bg-white/[0.04] px-1.5 py-0.5 font-mono text-zinc-500">
-                −{defect.penaltyPoints}
+            <span className="shrink-0 rounded-md bg-white/[0.06] px-1.5 py-0.5 font-mono text-[11px] font-medium text-zinc-400 border border-white/[0.04]">
+                -{defect.penaltyPoints}
             </span>
         </div>
     )
@@ -126,32 +139,43 @@ function LinkedItemRow({
 }) {
     const [showDefects, setShowDefects] = useState(false)
     const isPR = item.type === 'PULL_REQUEST'
+    const hasDefects = report && (report.defects?.length > 0 || report.qualityScore < 100)
 
     return (
-        <div className="rounded-lg border border-white/[0.04] bg-white/[0.02] transition-colors hover:bg-white/[0.03]">
-            <div className="flex items-center gap-3 px-3 py-2.5">
+        <div className={cn(
+            "rounded-xl border transition-all overflow-hidden",
+            showDefects ? "bg-white/[0.03] border-white/[0.08]" : "bg-white/[0.02] border-white/[0.04] hover:bg-white/[0.04] hover:border-white/[0.06]"
+        )}>
+            <div 
+                className="flex items-center gap-3 px-4 py-3 cursor-pointer"
+                onClick={() => hasDefects && setShowDefects(!showDefects)}
+            >
                 {/* Icon */}
-                <div className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-md ${isPR ? 'bg-purple-500/10 text-purple-400' : 'bg-blue-500/10 text-blue-400'}`}>
-                    {isPR ? <GitPullRequest className="h-3.5 w-3.5" /> : <GitCommitHorizontal className="h-3.5 w-3.5" />}
+                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white/[0.06] border border-white/[0.05]">
+                    {isPR ? <GitPullRequest className="h-4 w-4 text-zinc-300" /> : <GitCommitHorizontal className="h-4 w-4 text-zinc-300" />}
                 </div>
 
                 {/* Info */}
                 <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2">
-                        <span className="truncate text-[13px] font-medium text-white">{item.title}</span>
+                        <span className="truncate text-[13px] font-medium text-zinc-200">{item.title}</span>
                         <a
                             href={item.url}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="shrink-0 text-zinc-500 hover:text-zinc-300 transition-colors"
+                            className="shrink-0 text-zinc-600 hover:text-white transition-colors"
                             onClick={(e) => e.stopPropagation()}
                         >
-                            <ExternalLink className="h-3 w-3" />
+                            <ExternalLink className="h-3.5 w-3.5" />
                         </a>
                     </div>
-                    <div className="flex items-center gap-2 mt-0.5">
-                        <span className="text-[11px] text-zinc-500">
-                            {isPR ? `#${item.githubId}` : item.githubId.slice(0, 7)} · {item.author}
+                    <div className="flex items-center gap-2 mt-1">
+                        <span className="font-mono text-[11px] text-zinc-500 bg-black/20 px-1.5 py-0.5 rounded border border-white/[0.04]">
+                            {isPR ? `#${item.githubId}` : item.githubId.slice(0, 7)}
+                        </span>
+                        <span className="text-[11px] text-zinc-500 flex items-center gap-1.5">
+                            <span className="w-1 h-1 rounded-full bg-zinc-700"></span>
+                            {item.author}
                         </span>
                     </div>
                 </div>
@@ -159,30 +183,33 @@ function LinkedItemRow({
                 {/* Score */}
                 <ScoreBadge score={item.codeScore} />
 
-                {/* Expand defects */}
-                {report && (report.defects?.length > 0 || report.qualityScore < 100) && (
+                {/* Actions */}
+                <div className="flex items-center gap-1 ml-2">
+                    {hasDefects && (
+                        <button
+                            className="flex h-7 w-7 items-center justify-center rounded-md text-zinc-500 hover:text-white hover:bg-white/[0.06] transition-colors"
+                            title="View defects"
+                        >
+                            {showDefects ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+                        </button>
+                    )}
                     <button
-                        onClick={() => setShowDefects(!showDefects)}
-                        className="flex h-6 w-6 items-center justify-center rounded text-zinc-500 hover:text-zinc-300 hover:bg-white/[0.04] transition-colors"
-                        title="View defects"
+                        onClick={(e) => { e.stopPropagation(); onUnlink(item.id) }}
+                        disabled={isDeleting}
+                        className="flex h-7 w-7 items-center justify-center rounded-md text-zinc-600 hover:text-red-400 hover:bg-red-500/10 transition-colors disabled:opacity-40"
+                        title="Unlink"
                     >
-                        {showDefects ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}
+                        <Trash2 className="h-4 w-4" />
                     </button>
-                )}
-
-                {/* Delete */}
-                <button
-                    onClick={() => onUnlink(item.id)}
-                    disabled={isDeleting}
-                    className="flex h-6 w-6 items-center justify-center rounded text-zinc-600 hover:text-red-400 hover:bg-red-500/10 transition-colors disabled:opacity-40"
-                    title="Unlink"
-                >
-                    <Trash2 className="h-3.5 w-3.5" />
-                </button>
+                </div>
             </div>
 
             {/* Defects expanded */}
-            {showDefects && report && <DefectsList reportId={report.id} />}
+            {showDefects && report && (
+                <div className="border-t border-white/[0.04] bg-black/10">
+                    <DefectsList reportId={report.id} />
+                </div>
+            )}
         </div>
     )
 }
@@ -198,6 +225,7 @@ function GithubItemSelector({
     onClose: () => void
 }) {
     const [tab, setTab] = useState<'pr' | 'commit'>('pr')
+    const [searchQuery, setSearchQuery] = useState('')
     const { data: prs, isLoading: prsLoading } = useGithubPullRequests(projectId, tab === 'pr')
     const { data: commits, isLoading: commitsLoading } = useGithubCommits(projectId, tab === 'commit')
     const linkItem = useLinkGithubItem()
@@ -219,63 +247,107 @@ function GithubItemSelector({
     }
 
     const isLoading = tab === 'pr' ? prsLoading : commitsLoading
-    const items = tab === 'pr' ? prs : commits
+    const displayedItems = (() => {
+        const baseItems = tab === 'pr' ? prs : commits
+        if (!baseItems) return []
+        if (!searchQuery.trim()) return baseItems
+        
+        const q = searchQuery.toLowerCase()
+        return baseItems.filter(i => 
+            i.title.toLowerCase().includes(q) || 
+            i.author.toLowerCase().includes(q) || 
+            String(i.githubId).toLowerCase().includes(q)
+        )
+    })()
 
     return (
-        <div className="rounded-xl border border-white/[0.08] bg-[#1a1a1a] shadow-xl shadow-black/40 overflow-hidden">
-            {/* Tabs */}
-            <div className="flex border-b border-white/[0.06]">
-                <button
-                    onClick={() => setTab('pr')}
-                    className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 text-[12px] font-medium transition-colors ${tab === 'pr'
-                            ? 'text-purple-400 border-b-2 border-purple-400 bg-purple-500/[0.03]'
-                            : 'text-zinc-500 hover:text-zinc-300'
-                        }`}
-                >
-                    <GitPullRequest className="h-3.5 w-3.5" />
-                    Pull Requests
-                </button>
-                <button
-                    onClick={() => setTab('commit')}
-                    className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 text-[12px] font-medium transition-colors ${tab === 'commit'
-                            ? 'text-blue-400 border-b-2 border-blue-400 bg-blue-500/[0.03]'
-                            : 'text-zinc-500 hover:text-zinc-300'
-                        }`}
-                >
-                    <GitCommitHorizontal className="h-3.5 w-3.5" />
-                    Commits
-                </button>
+        <div className="h-[422px] flex flex-col rounded-2xl border border-white/[0.08] bg-[#1e1e1e] overflow-hidden">
+            {/* Segmented Control Tabs */}
+            <div className="flex-none p-2 pb-0">
+                <div className="flex bg-black/40 rounded-lg p-1 border border-white/[0.04]">
+                    <button
+                        onClick={() => setTab('pr')}
+                        className={cn(
+                            "flex-1 flex items-center justify-center gap-2 py-1.5 text-[12px] font-medium rounded-md transition-all",
+                            tab === 'pr'
+                                ? "bg-[#2a2a2a] text-white shadow-sm border border-white/[0.06]"
+                                : "text-zinc-500 hover:text-zinc-300"
+                        )}
+                    >
+                        <GitPullRequest className="h-3.5 w-3.5" />
+                        Pull Requests
+                    </button>
+                    <button
+                        onClick={() => setTab('commit')}
+                        className={cn(
+                            "flex-1 flex items-center justify-center gap-2 py-1.5 text-[12px] font-medium rounded-md transition-all",
+                            tab === 'commit'
+                                ? "bg-[#2a2a2a] text-white shadow-sm border border-white/[0.06]"
+                                : "text-zinc-500 hover:text-zinc-300"
+                        )}
+                    >
+                        <GitCommitHorizontal className="h-3.5 w-3.5" />
+                        Commits
+                    </button>
+                </div>
+            </div>
+
+            {/* Search Input */}
+            <div className="flex-none px-3 py-2 border-b border-white/[0.06]">
+                <div className="relative">
+                    <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-zinc-500 pointer-events-none" />
+                    <input 
+                        type="text" 
+                        placeholder={tab === 'pr' ? "Search pull requests..." : "Search commits..."}
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        className="w-full bg-black/20 border border-white/[0.05] rounded-lg pl-8 pr-3 py-1.5 text-[12px] text-white placeholder:text-zinc-600 focus:outline-none focus:border-white/[0.15] transition-colors"
+                    />
+                </div>
             </div>
 
             {/* List */}
-            <div className="max-h-[220px] overflow-auto">
+            <div className="flex-1 overflow-auto p-2 space-y-1">
                 {isLoading ? (
-                    <div className="flex items-center justify-center py-8">
+                    <div className="flex flex-col items-center justify-center py-4 gap-2">
                         <Loader2 className="h-4 w-4 animate-spin text-zinc-500" />
+                        <span className="text-[11px] text-zinc-500">Loading {tab === 'pr' ? 'pull requests' : 'commits'}...</span>
                     </div>
-                ) : !items?.length ? (
-                    <div className="py-8 text-center text-[12px] text-zinc-500">
-                        {tab === 'pr' ? 'No pull requests found' : 'No commits found'}
+                ) : !displayedItems?.length ? (
+                    <div className="py-4 text-center flex flex-col items-center gap-1">
+                        <FileCode2 className="h-4 w-4 text-zinc-700" />
+                        <p className="text-[12px] text-zinc-500 font-medium">Nothing found</p>
                     </div>
                 ) : (
-                    items.map((item) => {
+                    displayedItems.map((item: GithubPullRequest | GithubCommit) => {
                         const isPR = item.type === 'PULL_REQUEST'
                         return (
                             <button
                                 key={item.githubId}
                                 onClick={() => handleSelect(item)}
                                 disabled={linkItem.isPending}
-                                className="w-full flex items-center gap-3 px-3 py-2.5 text-left hover:bg-white/[0.04] transition-colors disabled:opacity-50"
+                                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left hover:bg-white/[0.05] transition-colors disabled:opacity-50 group border border-transparent hover:border-white/[0.04]"
                             >
-                                <div className={`flex h-6 w-6 shrink-0 items-center justify-center rounded ${isPR ? 'bg-purple-500/10 text-purple-400' : 'bg-blue-500/10 text-blue-400'}`}>
-                                    {isPR ? <GitPullRequest className="h-3 w-3" /> : <GitCommitHorizontal className="h-3 w-3" />}
+                                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-black/40 border border-white/[0.05] group-hover:bg-[#1a1a1a] transition-colors">
+                                    {isPR ? <GitPullRequest className="h-4 w-4 text-zinc-400 group-hover:text-white transition-colors" /> : <GitCommitHorizontal className="h-4 w-4 text-zinc-400 group-hover:text-white transition-colors" />}
                                 </div>
                                 <div className="min-w-0 flex-1">
-                                    <p className="truncate text-[12px] font-medium text-zinc-200">{item.title}</p>
-                                    <p className="text-[11px] text-zinc-500">
-                                        {isPR ? `#${item.githubId}` : item.githubId.slice(0, 7)} · {item.author}
-                                        {'state' in item && item.state ? ` · ${item.state}` : ''}
-                                    </p>
+                                    <p className="truncate text-[13px] font-medium text-zinc-300 group-hover:text-white transition-colors">{item.title}</p>
+                                    <div className="flex items-center gap-2 mt-1">
+                                        <span className="font-mono text-[10px] text-zinc-500 bg-black/30 px-1.5 rounded border border-white/[0.04]">
+                                            {isPR ? `#${item.githubId}` : item.githubId.slice(0, 7)}
+                                        </span>
+                                        <span className="text-[11px] text-zinc-600 truncate flex items-center gap-1.5">
+                                            <span className="w-1 h-1 rounded-full bg-zinc-700"></span>
+                                            {item.author}
+                                            {'state' in item && item.state ? ` · ${item.state}` : ''}
+                                        </span>
+                                    </div>
+                                </div>
+                                <div className="shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+                                    <div className="flex h-6 w-6 items-center justify-center rounded bg-white/[0.08] text-white">
+                                        <Plus className="h-3.5 w-3.5" />
+                                    </div>
                                 </div>
                             </button>
                         )
@@ -298,46 +370,62 @@ export function TaskGithubSection({ taskId, projectId }: TaskGithubSectionProps)
     }
 
     return (
-        <div className="space-y-3">
+        <div className="space-y-4">
             {/* Header */}
             <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                    <FileCode2 className="h-4 w-4 text-zinc-500" />
-                    <h3 className="text-[12px] font-medium uppercase tracking-wider text-zinc-500">
-                        Linked Code ({items?.length || 0})
+                <div className="flex items-center gap-2.5">
+                    <div className="flex h-6 w-6 items-center justify-center rounded-md bg-white/[0.06] border border-white/[0.04]">
+                        <FileCode2 className="h-3 w-3 text-zinc-300" />
+                    </div>
+                    <h3 className="text-[13px] font-semibold text-white tracking-tight">
+                        Linked Github
+                        {items && items.length > 0 && (
+                            <span className="ml-2 rounded-full bg-white/[0.08] px-2 py-0.5 text-[11px] font-medium text-zinc-300 border border-white/[0.04]">
+                                {items.length}
+                            </span>
+                        )}
                     </h3>
                 </div>
                 <button
                     onClick={() => setShowSelector(!showSelector)}
-                    className="flex h-7 items-center gap-1 rounded-md px-2.5 text-[12px] font-medium text-zinc-400 hover:text-white hover:bg-white/[0.06] transition-colors"
+                    className={cn(
+                        "flex h-7 items-center gap-1.5 rounded-md px-3 text-[12px] font-medium transition-all border",
+                        showSelector 
+                            ? "bg-white/[0.08] text-white border-white/[0.1]" 
+                            : "bg-transparent text-zinc-400 hover:text-white border-white/[0.06] hover:bg-white/[0.04]"
+                    )}
                 >
-                    <Plus className="h-3.5 w-3.5" />
-                    Link
+                    <Plus className={cn("h-3.5 w-3.5 transition-transform", showSelector && "rotate-45")} />
+                    {showSelector ? "Cancel" : "Add Link"}
                 </button>
             </div>
 
-            {/* Selector dropdown */}
-            {showSelector && (
+            {/* Content Area */}
+            {showSelector ? (
                 <GithubItemSelector
                     projectId={projectId}
                     taskId={taskId}
                     onClose={() => setShowSelector(false)}
                 />
-            )}
-
-            {/* Items list */}
-            {isLoading ? (
-                <div className="flex items-center justify-center py-4">
-                    <Loader2 className="h-4 w-4 animate-spin text-zinc-500" />
+            ) : isLoading ? (
+                <div className="flex flex-col items-center justify-center h-[422px] gap-3 border border-dashed border-white/[0.08] rounded-2xl bg-white/[0.01]">
+                    <Loader2 className="h-5 w-5 animate-spin text-zinc-500" />
+                    <span className="text-[12px] text-zinc-500">Loading linked items...</span>
                 </div>
             ) : !items?.length ? (
-                <div className="rounded-lg border border-dashed border-white/[0.06] py-5 text-center">
-                    <p className="text-[12px] text-zinc-500">
-                        No PRs or commits linked yet
-                    </p>
+                <div className="rounded-2xl border border-dashed border-white/[0.08] bg-white/[0.01] h-[422px] text-center flex flex-col items-center justify-center gap-3">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-white/[0.04] border border-white/[0.05]">
+                        <FileCode2 className="h-4 w-4 text-zinc-500" />
+                    </div>
+                    <div>
+                        <p className="text-[13px] font-medium text-zinc-300">No linked code yet</p>
+                        <p className="text-[12px] text-zinc-600 mt-1 max-w-[240px]">
+                            Link a pull request or commit to automatically track its quality and status here.
+                        </p>
+                    </div>
                 </div>
             ) : (
-                <div className="space-y-1.5">
+                <div className="space-y-2">
                     {items.map((item) => (
                         <LinkedItemRow
                             key={item.id}

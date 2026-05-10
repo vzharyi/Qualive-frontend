@@ -10,10 +10,7 @@ import {
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import {
-  ChevronLeft,
-  ChevronRight,
   Flag,
   Users,
   CalendarRange,
@@ -24,11 +21,12 @@ import {
   Sparkles,
   Plus,
   X,
-  Calendar,
-  CheckSquare,
+  Kanban,
 } from "lucide-react"
 import { useCreateProject } from "@/features/projects/api/projects.queries"
 import { cn } from "@/lib/utils"
+
+import { COLUMN_COLORS } from "@/features/projects/constants/colors"
 
 interface CreateProjectModalProps {
   open: boolean
@@ -75,29 +73,7 @@ const defaultColumns: ColumnConfig[] = [
   { id: "done", title: "Done", color: "#34d399" },
 ]
 
-// Color palette — HEX values
-const colorOptions = [
-  { value: "#94a3b8", label: "Slate" },
-  { value: "#60a5fa", label: "Blue" },
-  { value: "#fbbf24", label: "Amber" },
-  { value: "#34d399", label: "Green" },
-  { value: "#f87171", label: "Red" },
-  { value: "#c084fc", label: "Purple" },
-  { value: "#f472b6", label: "Pink" },
-  { value: "#22d3ee", label: "Cyan" },
-  { value: "#fb923c", label: "Orange" },
-  { value: "#a78bfa", label: "Violet" },
-]
-
-// Convert HEX #rrggbb to "r, g, b" for use in rgba()
-function hexToRGB(hex: string): string {
-  const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex)
-  if (!result) return "148, 163, 184" // fallback slate
-  return `${parseInt(result[1], 16)}, ${parseInt(result[2], 16)}, ${parseInt(result[3], 16)}`
-}
-
 export function CreateProjectModal({ open, onClose }: CreateProjectModalProps) {
-  const [step, setStep] = useState<1 | 2>(1)
   const [name, setName] = useState("")
   const [description, setDescription] = useState("")
   const [enabledFeatures, setEnabledFeatures] = useState<FeatureKey[]>([
@@ -110,8 +86,7 @@ export function CreateProjectModal({ open, onClose }: CreateProjectModalProps) {
 
   const createProject = useCreateProject()
 
-  const canContinue = name.trim().length > 0
-  const canCreate = canContinue && columns.length > 0
+  const canCreate = name.trim().length > 0 && columns.length > 0
 
   const handleToggleFeature = (id: FeatureKey) => {
     setEnabledFeatures((prev) =>
@@ -132,9 +107,9 @@ export function CreateProjectModal({ open, onClose }: CreateProjectModalProps) {
     setColumns((prev) => [
       ...prev,
       {
-        id: `custom-${index}`,
+        id: `custom-${Date.now()}`,
         title: `Column ${index}`,
-        color: "slate",
+        color: "#94a3b8",
       },
     ])
   }
@@ -145,7 +120,6 @@ export function CreateProjectModal({ open, onClose }: CreateProjectModalProps) {
   }
 
   const resetState = () => {
-    setStep(1)
     setName("")
     setDescription("")
     setEnabledFeatures(["priority", "team", "dates", "assignee"])
@@ -158,7 +132,8 @@ export function CreateProjectModal({ open, onClose }: CreateProjectModalProps) {
     resetState()
   }
 
-  const handleCreate = () => {
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
     if (!canCreate || createProject.isPending) return
 
     createProject.mutate(
@@ -179,348 +154,171 @@ export function CreateProjectModal({ open, onClose }: CreateProjectModalProps) {
     <Dialog open={open} onOpenChange={(val) => !val && handleClose()}>
       <DialogContent
         size="wide"
-        // Задал базовый цвет модалки #181818, чтобы не было швов по краям
-        className="max-w-[1000px] w-full p-0 gap-0 overflow-hidden bg-[#181818] border-white/10 text-zinc-200"
+        className="max-w-[910px] w-full p-0 gap-0 overflow-hidden bg-[#181818] border border-white/[0.08] text-zinc-200 shadow-2xl shadow-black/50 rounded-2xl"
       >
-        <div className="flex h-[600px]">
-
-          {/* Левая часть – форма (Step 1 & 2) – Фон #131313 */}
-          <div className="flex w-[400px] flex-col border-r border-white/10 p-6 bg-[#131313] z-10 shadow-[10px_0_20px_-10px_rgba(0,0,0,0.5)]">
-            <DialogHeader className="mb-4">
-              <div className="text-xs font-medium uppercase tracking-wider text-zinc-500">
-                {step === 1 ? "Step 1 of 2" : "Step 2 of 2"}
+        <form onSubmit={handleSubmit} className="flex flex-col h-[590px]">
+          {/* Header */}
+          <DialogHeader className="p-6 pb-2 bg-[#181818]">
+            <DialogTitle className="flex items-center gap-3 text-xl font-semibold text-white tracking-tight">
+              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-white/[0.05] border border-white/[0.1] shadow-inner">
+                <Kanban className="h-4 w-4 text-zinc-300" />
               </div>
-              <DialogTitle className="flex items-center gap-2 text-xl font-semibold text-white mt-1">
-                <span className="flex h-6 w-6 items-center justify-center rounded-full bg-emerald-500/10 text-xs font-semibold text-emerald-500">
-                  {step}
-                </span>
-                {step === 1 ? "Customize your project" : "Set up your board"}
-              </DialogTitle>
-              <DialogDescription className="text-sm text-zinc-400 mt-1">
-                {step === 1
-                  ? "Name your project and choose which task properties to track."
-                  : "Choose how many columns you want on your Kanban board."}
-              </DialogDescription>
-            </DialogHeader>
+              Create New Project
+            </DialogTitle>
+            <DialogDescription className="hidden" />
+          </DialogHeader>
 
-            <ScrollArea className="flex-1 overflow-y-auto pr-4 -mr-4">
-              {step === 1 ? (
-                <div className="space-y-6">
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium text-zinc-300">Project name</label>
-                    <Input
-                      placeholder="e.g. Public launch of iOS app"
-                      value={name}
-                      onChange={(e) => setName(e.target.value)}
-                      className="h-10 bg-white/5 border-white/10 text-white placeholder:text-zinc-600 focus-visible:ring-emerald-500/50"
-                    />
-                  </div>
+          <div className="flex flex-1 min-h-0 bg-[#181818]">
+            {/* Left Column: Basic Details */}
+            <ScrollArea className="flex-3">
+              <div className="space-y-6 p-6">
+                <div className="space-y-2.5">
+                  <label className="text-[13px] font-medium text-zinc-300">Project name</label>
+                  <Input
+                    autoFocus
+                    placeholder="e.g. Core API Rewrite"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    className="h-11 bg-white/[0.02] border border-white/[0.06] text-white text-[14px] rounded-xl focus-visible:ring-1 focus-visible:ring-white/[0.15] focus-visible:border-white/[0.15] placeholder:text-zinc-600 transition-all shadow-inner"
+                  />
+                </div>
 
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium text-zinc-300">
-                      Description <span className="text-zinc-500 font-normal">(optional)</span>
+                <div className="space-y-2.5">
+                  <label className="text-[13px] font-medium text-zinc-300 flex items-center justify-between">
+                    Description
+                    <span className="text-zinc-600 font-normal">Optional</span>
+                  </label>
+                  <textarea
+                    rows={4}
+                    className="flex w-full rounded-xl border border-white/[0.06] bg-white/[0.02] px-4 py-3 text-[14px] text-white placeholder:text-zinc-600 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-white/[0.15] focus-visible:border-white/[0.15] resize-none transition-all shadow-inner"
+                    placeholder="Context for your team..."
+                    value={description}
+                    onChange={(e) => setDescription(e.target.value)}
+                  />
+                </div>
+
+                <div className="space-y-4 pt-2">
+                  <div className="flex items-center justify-between">
+                    <label className="text-[13px] font-medium text-zinc-300">
+                      Task properties
                     </label>
-                    <textarea
-                      rows={3}
-                      className="flex w-full rounded-md border border-white/10 bg-white/5 px-3 py-2 text-sm text-white placeholder:text-zinc-600 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-emerald-500/50 resize-none"
-                      placeholder="Short description for your team..."
-                      value={description}
-                      onChange={(e) => setDescription(e.target.value)}
-                    />
+                    <span className="text-[12px] font-mono text-zinc-600 bg-white/[0.03] px-2 py-0.5 rounded-md border border-white/[0.05]">
+                      {enabledFeatures.length}/{featureToggles.length}
+                    </span>
                   </div>
 
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-between">
-                      <label className="text-sm font-medium text-zinc-300">
-                        Task properties
-                      </label>
-                      <span className="text-xs text-zinc-500">
-                        {enabledFeatures.length} selected
-                      </span>
-                    </div>
-
-                    {/* Кнопки теперь идут оберткой (flex-wrap), а не жесткой сеткой */}
-                    <div className="flex flex-wrap gap-2.5">
-                      {featureToggles.map((feature) => {
-                        const Icon = feature.icon
-                        const active = enabledFeatures.includes(feature.id)
-                        return (
-                          <button
-                            key={feature.id}
-                            type="button"
-                            onClick={() => handleToggleFeature(feature.id)}
-                            className={cn(
-                              "flex items-center gap-2 rounded-full border px-3.5 py-1.5 text-[13px] font-medium transition-colors",
-                              active
-                                ? "border-emerald-500 text-white"
-                                : "border-white/10 text-zinc-400 hover:border-white/20 hover:text-zinc-300",
-                            )}
-                          >
-                            <Icon
-                              className={cn(
-                                "h-4 w-4",
-                                active ? "text-emerald-500" : "text-zinc-400"
-                              )}
-                            />
-                            <span>{feature.label}</span>
-                          </button>
-                        )
-                      })}
-                    </div>
+                  <div className="flex flex-wrap gap-2.5">
+                    {featureToggles.map((feature) => {
+                      const Icon = feature.icon
+                      const active = enabledFeatures.includes(feature.id)
+                      return (
+                        <button
+                          key={feature.id}
+                          type="button"
+                          onClick={() => handleToggleFeature(feature.id)}
+                          className={cn(
+                            "flex items-center gap-2 rounded-lg border px-3 py-1.5 text-[13px] font-medium transition-all duration-200 cursor-pointer",
+                            active
+                              ? "border-white/[0.1] bg-white/[0.08] text-zinc-200 shadow-sm"
+                              : "border-transparent bg-white/[0.02] text-zinc-500 hover:bg-white/[0.04] hover:text-zinc-300",
+                          )}
+                        >
+                          <Icon className={cn("h-4 w-4", active ? "text-zinc-300" : "opacity-60")} />
+                          {feature.label}
+                        </button>
+                      )
+                    })}
                   </div>
                 </div>
-              ) : (
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm font-medium text-zinc-300">
-                      Columns ({columns.length})
-                    </span>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={handleAddColumn}
-                      className="h-8 gap-1 rounded-md border-white/10 bg-white/5 text-xs hover:bg-white/10 text-zinc-300"
-                    >
-                      <Plus className="h-3 w-3" />
-                      Add Column
-                    </Button>
-                  </div>
+              </div>
+            </ScrollArea>
 
-                  <div className="space-y-2">
-                    {columns.map((column) => (
-                      <div
-                        key={column.id}
-                        className="flex items-center gap-2 rounded-lg border border-white/10 bg-white/5 p-2"
-                      >
-                        {/* Live color dot */}
-                        <div
-                          className="h-6 w-1.5 rounded-full flex-shrink-0"
-                          style={{ backgroundColor: column.color }}
-                        />
+            {/* Right Column: Columns Setup */}
+            <ScrollArea className="flex-2.5">
+              <div className="space-y-5 p-6">
+                <div className="flex items-center justify-between">
+                  <label className="text-[13px] font-medium text-zinc-300">
+                    Board columns
+                  </label>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={handleAddColumn}
+                    className="h-8 px-3 text-[12px] font-medium text-zinc-400 hover:text-white hover:bg-white/[0.06] rounded-lg transition-colors cursor-pointer"
+                  >
+                    <Plus className="h-3.5 w-3.5 mr-1.5" />
+                    Add Column
+                  </Button>
+                </div>
+
+                <div className="space-y-3">
+                  {columns.map((column) => (
+                    <div
+                      key={column.id}
+                      className="group flex flex-col gap-2.5 rounded-xl border border-white/[0.06] bg-white/[0.02] p-3.5 focus-within:border-white/[0.15] focus-within:bg-white/[0.04] transition-all shadow-sm"
+                    >
+                      <div className="flex items-center gap-3">
                         <Input
                           value={column.title}
                           onChange={(e) =>
                             handleChangeColumnTitle(column.id, e.target.value)
                           }
-                          className="h-8 flex-1 bg-transparent border-none text-sm text-zinc-200 focus-visible:ring-0 px-2"
+                          className="h-8 flex-1 bg-transparent border-none text-[14px] text-white focus-visible:ring-0 px-1 font-medium placeholder:text-zinc-600"
+                          placeholder="Column Title"
                         />
-                        {/* Color swatches */}
-                        <div className="flex items-center gap-1">
-                          {colorOptions.map((opt) => (
-                            <button
-                              key={opt.value}
-                              type="button"
-                              title={opt.label}
-                              onClick={() => handleChangeColumnColor(column.id, opt.value)}
-                              className="h-4 w-4 rounded-full transition-all cursor-pointer"
-                              style={{
-                                backgroundColor: opt.value,
-                                boxShadow: column.color === opt.value
-                                  ? `0 0 0 2px #131313, 0 0 0 3.5px ${opt.value}`
-                                  : 'none',
-                                transform: column.color === opt.value ? 'scale(1.2)' : 'scale(1)',
-                              }}
-                            />
-                          ))}
-                        </div>
-                        <Button
+                        <button
                           type="button"
-                          variant="ghost"
-                          size="icon"
                           onClick={() => handleRemoveColumn(column.id)}
                           disabled={columns.length <= 1}
-                          className="h-8 w-8 text-zinc-500 hover:text-red-400 hover:bg-red-400/10"
+                          className="h-7 w-7 flex items-center justify-center rounded-md text-zinc-500 hover:text-red-400 hover:bg-red-500/10 disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-zinc-500 transition-colors cursor-pointer"
                         >
                           <X className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </ScrollArea>
-
-            <DialogFooter className="mt-6 pt-4 border-t border-white/10 gap-2 sm:justify-between">
-              <Button
-                type="button"
-                variant="ghost"
-                onClick={handleClose}
-                className="text-xs text-zinc-400 hover:text-white hover:bg-white/5"
-              >
-                Cancel
-              </Button>
-              <div className="flex items-center gap-2">
-                {step === 2 && (
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => setStep(1)}
-                    className="gap-1 text-xs border-white/10 bg-white/5 text-zinc-300 hover:bg-white/10"
-                  >
-                    <ChevronLeft className="h-3 w-3" />
-                    Back
-                  </Button>
-                )}
-                {step === 1 ? (
-                  <Button
-                    type="button"
-                    disabled={!canContinue}
-                    onClick={() => canContinue && setStep(2)}
-                    className="gap-2 text-xs bg-blue-600 hover:bg-blue-700 text-white"
-                  >
-                    Continue
-                    <ChevronRight className="h-3 w-3" />
-                  </Button>
-                ) : (
-                  <Button
-                    type="button"
-                    onClick={handleCreate}
-                    disabled={!canCreate || createProject.isPending}
-                    className="gap-2 text-xs bg-blue-600 hover:bg-blue-700 text-white"
-                  >
-                    {createProject.isPending ? "Creating..." : "Create project"}
-                  </Button>
-                )}
-              </div>
-            </DialogFooter>
-          </div>
-
-          {/* Правая часть – Горизонтальное Kanban превью (Фулл размер) – Фон #181818 */}
-          <div className="flex flex-1 flex-col bg-[#181818] p-6 min-w-0 w-[400px]">
-            {/* Header превью */}
-            <div className="mb-6 flex items-start justify-between flex-shrink-0">
-              <div>
-                <p className="text-xs font-medium uppercase tracking-wider text-zinc-500 mb-1">
-                  Live preview
-                </p>
-                <h3 className="text-xl font-semibold text-white">
-                  {name || "Public launch of iOS app"}
-                </h3>
-              </div>
-            </div>
-
-            {/* Контейнер колонок со скроллом */}
-            <div className="flex-1 overflow-x-auto pb-4 custom-scrollbar">
-              <div className="flex h-full gap-4 w-max">
-                {columns.map((column) => {
-                  const colorRGB = hexToRGB(column.color)
-
-                  return (
-                    <div
-                      key={column.id}
-                      className="flex h-fit w-[300px] flex-shrink-0 flex-col rounded-xl relative"
-                    >
-                      {/* Заголовок колонки */}
-                      <div className="flex items-center justify-between mb-3 px-1">
-                        <div
-                          className="flex items-center gap-2 rounded-full px-3 py-1.5 text-[13px] font-medium"
-                          style={{ backgroundColor: `rgba(${colorRGB}, 0.12)`, color: `rgb(${colorRGB})` }}
-                        >
-                          <div className="h-2 w-2 rounded-full" style={{ backgroundColor: `rgb(${colorRGB})` }} />
-                          {column.title}
-                          <span className="ml-1 opacity-70 text-[11px] font-bold">2</span>
-                        </div>
-                      </div>
-
-                      {/* Статичные таски для превью */}
-                      <div className="flex flex-col gap-2">
-                        {[1, 2].map((idx) => (
-                          <div
-                            key={idx}
-                            className="relative rounded-xl border p-3.5"
-                            style={{
-                              background: `linear-gradient(rgba(${colorRGB}, 0.08), rgba(${colorRGB}, 0.08)), #181818`,
-                              borderColor: `rgba(${colorRGB}, 0.12)`,
-                            }}
-                          >
-                            <h4 className="mb-2 pr-6 text-[13px] font-medium leading-snug text-zinc-200">
-                              {idx === 1 ? "Design onboarding screen" : "Connect analytics tools"}
-                            </h4>
-
-                            {/* Assignee Preview */}
-                            {enabledFeatures.includes("assignee") && (
-                              <div className="flex items-center gap-2 mb-2">
-                                <Avatar className="h-5 w-5 ring-1 ring-white/[0.06]">
-                                  <AvatarFallback className="text-[9px] bg-zinc-800 text-zinc-400">
-                                    {idx === 1 ? "A" : "B"}
-                                  </AvatarFallback>
-                                </Avatar>
-                                <span className="text-[11px] text-zinc-500">
-                                  {idx === 1 ? "Alex D." : "Ben P."}
-                                </span>
-                              </div>
-                            )}
-
-                            {/* Нижний ряд с мета-информацией */}
-                            {enabledFeatures.some(f => ["dates", "attachments", "progress", "priority", "budget", "aiSummary"].includes(f)) && (
-                              <div className="mt-3 flex h-6 w-full items-center justify-between text-[11px] text-zinc-500">
-                                <div className="flex items-center gap-3">
-                                  {enabledFeatures.includes("dates") && (
-                                    <div className="flex items-center gap-1">
-                                      <Calendar className="h-3 w-3" />
-                                      <span>Mar 24</span>
-                                    </div>
-                                  )}
-
-                                  {enabledFeatures.includes("attachments") && (
-                                    <div className="flex items-center gap-1">
-                                      <Paperclip className="h-3 w-3" />
-                                      <span>2</span>
-                                    </div>
-                                  )}
-
-                                  {enabledFeatures.includes("progress") && (
-                                    <div className="flex items-center gap-1 text-emerald-500">
-                                      <CheckSquare className="h-3 w-3" />
-                                      <span>3/3</span>
-                                    </div>
-                                  )}
-
-                                  {enabledFeatures.includes("budget") && (
-                                    <span className="rounded bg-white/5 px-1.5 py-0.5 text-[10px]">
-                                      $2,400
-                                    </span>
-                                  )}
-                                </div>
-
-                                <div className="flex items-center gap-2.5">
-                                  {enabledFeatures.includes("aiSummary") && (
-                                    <Sparkles className="h-3 w-3 text-emerald-400" />
-                                  )}
-                                  {enabledFeatures.includes("priority") && (
-                                    <div
-                                      className="h-2 w-2 rounded-full bg-red-500"
-                                      title="High Priority"
-                                    />
-                                  )}
-                                </div>
-                              </div>
-                            )}
-                          </div>
-                        ))}
-
-                        {/* Кнопка "New task" как в оригинале */}
-                        <button
-                          className="w-full flex items-center justify-start gap-2 py-2.5 px-3 rounded-xl text-[13px] font-medium"
-                          style={{
-                            backgroundColor: `rgba(${colorRGB}, 0.04)`,
-                            color: `rgba(${colorRGB}, 0.8)`,
-                            border: `1px solid rgba(${colorRGB}, 0.1)`,
-                          }}
-                        >
-                          <Plus className="h-4 w-4" />
-                          New task
                         </button>
                       </div>
+                      
+                      <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-white/[0.04] px-1">
+                        {COLUMN_COLORS.map((opt) => (
+                          <button
+                            key={opt.value}
+                            type="button"
+                            title={opt.label}
+                            onClick={() => handleChangeColumnColor(column.id, opt.value)}
+                            className={cn(
+                              "h-5 w-5 rounded-full transition-all duration-200 border-[2.5px] cursor-pointer",
+                              column.color === opt.value 
+                                ? "border-white scale-110 shadow-sm" 
+                                : "border-transparent hover:scale-110 hover:border-white/50 opacity-80 hover:opacity-100"
+                            )}
+                            style={{ backgroundColor: opt.value }}
+                          />
+                        ))}
+                      </div>
                     </div>
-                  )
-                })}
+                  ))}
+                </div>
               </div>
-            </div>
+            </ScrollArea>
           </div>
 
-        </div>
+          {/* Footer */}
+          <DialogFooter className="p-6 pt-2 bg-[#181818] flex items-center justify-end gap-3 rounded-b-2xl">
+            <button
+              type="button"
+              onClick={handleClose}
+              className="h-9 px-5 text-[13px] font-medium text-zinc-500 hover:text-zinc-300 hover:bg-white/[0.04] rounded-lg transition-colors cursor-pointer"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={!canCreate || createProject.isPending}
+              className="h-9 px-6 text-[13px] font-medium bg-white/[0.08] text-zinc-200 border border-white/[0.05] hover:bg-white/[0.12] hover:text-white disabled:opacity-40 disabled:hover:bg-white/[0.08] rounded-lg transition-all cursor-pointer"
+            >
+              {createProject.isPending ? "Creating..." : "Create Project"}
+            </button>
+          </DialogFooter>
+        </form>
       </DialogContent>
     </Dialog>
   )

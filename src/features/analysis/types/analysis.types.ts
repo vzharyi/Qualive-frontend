@@ -37,3 +37,24 @@ export interface AnalysisDefect {
     severity: DefectSeverity
     penaltyPoints: number
 }
+
+export interface PublicAnalysisRequest {
+    code: string
+    fileName: string
+}
+
+export interface PublicAnalysisDefect {
+    ruleId: string
+    ruleType: DefectRuleType
+    message: string
+    line: number
+    column: number
+    severity: DefectSeverity
+}
+
+export interface PublicAnalysisResponse {
+    qualityScore: number
+    decision: AnalysisDecision
+    linesOfCode: number
+    defects: PublicAnalysisDefect[]
+}

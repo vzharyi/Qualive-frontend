@@ -18,6 +18,22 @@ import { AppHeader } from '@/components/layout/app-header'
 import { useAuth } from '@/features/auth/store/auth.store'
 import { useProjects } from '@/features/projects/api/projects.queries'
 import { CreateProjectModal } from '@/features/projects/components/create-project-modal'
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+
+const containerVariants = {
+    hidden: { opacity: 0 },
+    show: {
+        opacity: 1,
+        transition: {
+            staggerChildren: 0.1
+        }
+    }
+}
+
+const itemVariants = {
+    hidden: { opacity: 0, y: 20 },
+    show: { opacity: 1, y: 0, transition: { type: "spring", stiffness: 300, damping: 24 } }
+}
 
 const features = [
     {
@@ -67,6 +83,25 @@ const iconColorMap: Record<string, string> = {
     teal: 'bg-teal-500/10 text-teal-400',
 }
 
+const PROJECT_COLORS = [
+    { bg: 'bg-blue-500/10', text: 'text-blue-400', border: 'border-blue-500/20', hoverBorder: 'hover:border-blue-500/40' },
+    { bg: 'bg-violet-500/10', text: 'text-violet-400', border: 'border-violet-500/20', hoverBorder: 'hover:border-violet-500/40' },
+    { bg: 'bg-amber-500/10', text: 'text-amber-400', border: 'border-amber-500/20', hoverBorder: 'hover:border-amber-500/40' },
+    { bg: 'bg-rose-500/10', text: 'text-rose-400', border: 'border-rose-500/20', hoverBorder: 'hover:border-rose-500/40' },
+    { bg: 'bg-emerald-500/10', text: 'text-emerald-400', border: 'border-emerald-500/20', hoverBorder: 'hover:border-emerald-500/40' },
+    { bg: 'bg-cyan-500/10', text: 'text-cyan-400', border: 'border-cyan-500/20', hoverBorder: 'hover:border-cyan-500/40' },
+    { bg: 'bg-fuchsia-500/10', text: 'text-fuchsia-400', border: 'border-fuchsia-500/20', hoverBorder: 'hover:border-fuchsia-500/40' },
+]
+
+const getProjectColor = (id: string | number) => {
+    const str = String(id);
+    let hash = 0;
+    for (let i = 0; i < str.length; i++) {
+        hash = str.charCodeAt(i) + ((hash << 5) - hash);
+    }
+    return PROJECT_COLORS[Math.abs(hash) % PROJECT_COLORS.length];
+}
+
 export default function DashboardPage() {
     const [sidebarOpen, setSidebarOpen] = useState(true)
     const { user } = useAuth()
@@ -81,7 +116,7 @@ export default function DashboardPage() {
             <div className="flex flex-1 flex-col overflow-hidden">
                 <AppHeader sidebarOpen={sidebarOpen} onToggleSidebar={() => setSidebarOpen(true)} />
                 <main className="flex-1 overflow-auto">
-                    <div className="mx-auto max-w-3xl px-8 py-12">
+                    <div className="mx-auto max-w-[1050px] w-full px-8 py-12">
                         {isLoading ? (
                             <div className="flex items-center justify-center py-32">
                                 <Loader2 className="h-6 w-6 text-zinc-600 animate-spin" />
@@ -105,7 +140,7 @@ export default function DashboardPage() {
                                     </div>
                                     <button
                                         onClick={() => setShowCreateModal(true)}
-                                        className="flex items-center gap-2 h-9 px-4 rounded-lg bg-emerald-500 text-[13px] text-black font-semibold hover:bg-emerald-400 transition-all cursor-pointer"
+                                        className="flex items-center gap-2 h-9 px-4 rounded-lg bg-white/[0.08] text-[13px] text-zinc-200 font-medium border border-white/[0.05] hover:bg-white/[0.12] hover:text-white transition-all cursor-pointer"
                                     >
                                         <Plus className="h-4 w-4" />
                                         New Project
@@ -114,33 +149,93 @@ export default function DashboardPage() {
 
                                 {/* Project List */}
                                 <motion.div
-                                    initial={{ opacity: 0, y: 16 }}
-                                    animate={{ opacity: 1, y: 0 }}
-                                    transition={{ duration: 0.4, delay: 0.1 }}
-                                    className="space-y-2"
+                                    variants={containerVariants}
+                                    initial="hidden"
+                                    animate="show"
+                                    className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5"
                                 >
-                                    {projects.map((project) => (
-                                        <Link
-                                            key={project.id}
-                                            to={`/projects/${project.id}`}
-                                            className="group flex items-center justify-between p-4 rounded-xl border border-white/[0.06] bg-white/[0.02] hover:bg-white/[0.04] hover:border-white/[0.1] transition-all duration-200"
-                                        >
-                                            <div className="flex items-center gap-3">
-                                                <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-gradient-to-br from-emerald-400/20 to-violet-500/20 text-white font-bold text-[11px]">
-                                                    {project.name.charAt(0).toUpperCase()}
+                                    {projects.map((project) => {
+                                        const color = getProjectColor(project.id);
+                                        return (
+                                        <motion.div variants={itemVariants} key={project.id}>
+                                            <Link
+                                                to={`/projects/${project.id}`}
+                                                className={`group relative flex flex-col justify-between p-5 h-[200px] rounded-2xl border border-white/[0.06] bg-white/[0.02] hover:bg-white/[0.04] ${color.hoverBorder} transition-all duration-300 overflow-visible`}
+                                            >
+                                                {/* Background hover subtle glow */}
+                                                <div className="absolute inset-0 bg-white/[0.02] opacity-0 group-hover:opacity-100 transition-opacity duration-500 rounded-2xl pointer-events-none" />
+
+                                                <div className="relative z-10">
+                                                    <div className="flex items-start justify-between mb-4">
+                                                        <div className="flex items-center gap-3">
+                                                            <div className={`flex h-11 w-11 items-center justify-center rounded-xl border ${color.bg} ${color.border} ${color.text} font-bold text-[14px] shadow-inner`}>
+                                                                {project.name.charAt(0).toUpperCase()}
+                                                            </div>
+                                                            <div>
+                                                                <h3 className="text-[15px] font-semibold text-zinc-200 group-hover:text-white transition-colors line-clamp-1">
+                                                                    {project.name}
+                                                                </h3>
+                                                                <p className="text-[12px] text-zinc-500 mt-0.5">
+                                                                    Created by <span className="text-zinc-400">{project.owner?.firstName || project.owner?.login || 'Unknown'}</span>
+                                                                </p>
+                                                            </div>
+                                                        </div>
+                                                        <div className="h-8 w-8 rounded-full bg-white/[0.06] border border-white/[0.05] flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-300 transform translate-x-[-10px] group-hover:translate-x-0">
+                                                            <ArrowRight className={`h-4 w-4 ${color.text}`} />
+                                                        </div>
+                                                    </div>
+
+                                                    <p className="text-[13px] text-zinc-400 line-clamp-2 leading-relaxed">
+                                                        {project.description || "No description provided for this project."}
+                                                    </p>
                                                 </div>
-                                                <div>
-                                                    <p className="text-[14px] font-medium text-white">{project.name}</p>
-                                                    {project.description && (
-                                                        <p className="text-[12px] text-zinc-600 mt-0.5 truncate max-w-[400px]">
-                                                            {project.description}
-                                                        </p>
-                                                    )}
+
+                                                <div className="relative z-10 flex items-center justify-between mt-auto pt-4 border-t border-white/[0.04]">
+                                                    <div className="flex items-center gap-1.5 px-2 py-1 rounded-md bg-white/[0.03] border border-white/[0.05]">
+                                                        <Users className="h-3.5 w-3.5 text-zinc-500" />
+                                                        <span className="text-[12px] font-medium text-zinc-400">
+                                                            {project.members?.length || 0} {project.members?.length === 1 ? 'member' : 'members'}
+                                                        </span>
+                                                    </div>
+
+                                                    {/* Expandable Avatar Stack */}
+                                                    <div className="flex items-center justify-end -space-x-2 group-hover:space-x-1 transition-all duration-300">
+                                                        {project.members?.slice(0, 5).map((member, i) => {
+                                                            const mUser = member.user
+                                                            const initials = mUser
+                                                                ? (`${mUser.firstName?.charAt(0) || ""}${mUser.lastName?.charAt(0) || ""}` || mUser.login?.charAt(0) || "?").toUpperCase()
+                                                                : "?"
+                                                            return (
+                                                                <div
+                                                                    key={member.userId}
+                                                                    className="relative group/avatar"
+                                                                    style={{ zIndex: 10 - i }}
+                                                                >
+                                                                    <Avatar className="h-7 w-7 ring-2 ring-[#181818] transition-all duration-300 hover:!scale-110 hover:!ring-white/[0.2]">
+                                                                        {mUser?.avatarUrl && <AvatarImage src={mUser.avatarUrl} />}
+                                                                        <AvatarFallback className="bg-white/10 text-white text-[10px] font-bold">
+                                                                            {initials}
+                                                                        </AvatarFallback>
+                                                                    </Avatar>
+                                                                    {/* Tooltip on hover */}
+                                                                    <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2.5 py-1.5 bg-zinc-800 text-white text-[11px] font-medium rounded-md shadow-xl opacity-0 group-hover/avatar:opacity-100 pointer-events-none whitespace-nowrap z-50 transform scale-95 group-hover/avatar:scale-100 transition-all">
+                                                                        {mUser?.firstName || mUser?.login} <span className="text-zinc-400 ml-1">({member.role.toLowerCase()})</span>
+                                                                        <div className="absolute top-full left-1/2 -translate-x-1/2 border-[4px] border-transparent border-t-zinc-800" />
+                                                                    </div>
+                                                                </div>
+                                                            )
+                                                        })}
+                                                        {project.members && project.members.length > 5 && (
+                                                            <div className="h-7 w-7 rounded-full ring-2 ring-[#181818] bg-zinc-800 flex items-center justify-center text-[10px] text-zinc-400 font-bold z-0 group-hover:ml-1 transition-all">
+                                                                +{project.members.length - 5}
+                                                            </div>
+                                                        )}
+                                                    </div>
                                                 </div>
-                                            </div>
-                                            <ArrowRight className="h-4 w-4 text-zinc-700 group-hover:text-zinc-400 transition-colors" />
-                                        </Link>
-                                    ))}
+                                            </Link>
+                                        </motion.div>
+                                        );
+                                    })}
                                 </motion.div>
                             </>
                         ) : (
@@ -170,9 +265,9 @@ export default function DashboardPage() {
                                 >
                                     <button
                                         onClick={() => setShowCreateModal(true)}
-                                        className="w-full group flex items-center justify-center gap-3 p-5 rounded-xl border border-dashed border-emerald-500/20 bg-emerald-500/[0.03] hover:bg-emerald-500/[0.06] hover:border-emerald-500/30 transition-all duration-200 cursor-pointer"
+                                        className="w-full group flex items-center justify-center gap-3 p-5 rounded-xl border border-dashed border-white/[0.1] bg-white/[0.02] hover:bg-white/[0.04] hover:border-white/[0.2] transition-all duration-200 cursor-pointer"
                                     >
-                                        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-emerald-500/10 text-emerald-400 group-hover:bg-emerald-500/20 transition-colors">
+                                        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-white/[0.04] border border-white/[0.06] text-zinc-400 group-hover:bg-white/[0.08] group-hover:text-white transition-all">
                                             <Plus className="h-5 w-5" />
                                         </div>
                                         <div className="text-left">

@@ -1,6 +1,6 @@
 import { api } from '@/api/axios-instance'
 import type { User, RegisterDto } from '@/features/auth/types/auth.types'
-import type { UpdateUserDto } from '../types/users.types'
+import type { UpdateUserDto, ChangePasswordDto } from '../types/users.types'
 
 export const usersApi = {
     getMe: async (): Promise<User> => {
@@ -30,5 +30,21 @@ export const usersApi = {
 
     deleteUser: async (id: number): Promise<void> => {
         await api.delete(`/users/${id}`)
+    },
+
+    changePassword: async (data: ChangePasswordDto): Promise<{ message: string }> => {
+        const response = await api.patch<{ message: string }>('/users/me/password', data)
+        return response.data
+    },
+
+    uploadAvatar: async (file: File): Promise<User> => {
+        const formData = new FormData()
+        formData.append('file', file)
+        const response = await api.post<User>('/users/me/avatar', formData, {
+            headers: {
+                'Content-Type': 'multipart/form-data',
+            },
+        })
+        return response.data
     },
 }

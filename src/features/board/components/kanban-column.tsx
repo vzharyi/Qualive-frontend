@@ -26,6 +26,7 @@ interface KanbanColumnProps {
   onDropTask: (taskId: number, beforeId: number | null) => void
   projectId: number
   members?: ProjectMember[]
+  isZooming?: boolean
 }
 
 const DropIndicator = ({ beforeId, columnId, priority }: { beforeId: string | number, columnId: number, priority: string }) => {
@@ -46,6 +47,7 @@ export function KanbanColumn({
   onDropTask,
   projectId,
   members = [],
+  isZooming = false,
 }: KanbanColumnProps) {
   const [isOver, setIsOver] = useState(false)
   const dragCounter = useRef(0)
@@ -362,7 +364,7 @@ export function KanbanColumn({
       dragControls={dragControls}
       layout="position"
       axis="x"
-      transition={{ type: "spring", stiffness: 300, damping: 30 }}
+      transition={isZooming ? { duration: 0 } : { type: "spring", stiffness: 300, damping: 30 }}
       className="flex h-fit w-[300px] flex-shrink-0 flex-col rounded-xl relative select-none"
       style={{
         backgroundColor: isOver ? `rgba(${colorRGB}, 0.01)` : "transparent",

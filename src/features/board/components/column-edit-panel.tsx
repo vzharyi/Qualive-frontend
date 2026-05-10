@@ -7,7 +7,7 @@ import { useAuth } from '@/features/auth/store/auth.store'
 import type { ProjectMember } from '@/features/projects/types/projects.types'
 import { cn } from '@/lib/utils'
 
-const PRESET_COLORS = ["#94a3b8", "#fbbf24", "#fb923c", "#f87171", "#c084fc", "#60a5fa", "#34d399"]
+import { COLUMN_COLORS } from '@/features/projects/constants/colors'
 
 interface ColumnEditPanelProps {
     open: boolean
@@ -147,15 +147,15 @@ export function ColumnEditPanel({
                                     Theme
                                 </div>
                                 <div className="flex flex-wrap gap-2.5">
-                                    {PRESET_COLORS.map((c) => (
+                                    {COLUMN_COLORS.map((c) => (
                                         <button
-                                            key={c}
-                                            onClick={() => onColorSelect(c)}
+                                            key={c.value}
+                                            onClick={() => onColorSelect(c.value)}
                                             className={cn(
                                                 "h-6 w-6 rounded-full border-2 transition-all hover:scale-110 active:scale-95",
-                                                column.color === c ? "border-white scale-110 shadow-lg shadow-white/10" : "border-transparent"
+                                                column.color === c.value ? "border-white scale-110 shadow-lg shadow-white/10" : "border-transparent"
                                             )}
-                                            style={{ backgroundColor: c }}
+                                            style={{ backgroundColor: c.value }}
                                         />
                                     ))}
                                 </div>

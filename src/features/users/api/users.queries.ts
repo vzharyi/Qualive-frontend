@@ -1,7 +1,9 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { usersApi } from './users.api'
-import type { UpdateUserDto } from '../types/users.types'
+import type { UpdateUserDto, ChangePasswordDto } from '../types/users.types'
 import type { RegisterDto } from '@/features/auth/types/auth.types'
+import { projectKeys } from '@/features/projects/api/projects.queries'
+import { taskKeys } from '@/features/tasks/api/tasks.queries'
 
 // ─── Query Keys ───
 export const userKeys = {
@@ -59,7 +61,8 @@ export function useUpdateUser() {
             queryClient.invalidateQueries({ queryKey: userKeys.all })
             queryClient.invalidateQueries({ queryKey: userKeys.detail(variables.id) })
             queryClient.invalidateQueries({ queryKey: userKeys.me })
-        },
+            queryClient.invalidateQueries({ queryKey: projectKeys.all })
+            queryClient.invalidateQueries({ queryKey: taskKeys.all })},
     })
 }
 
@@ -73,3 +76,25 @@ export function useDeleteUser() {
         },
     })
 }
+
+export function useChangePassword() {
+    return useMutation({
+        mutationFn: (data: ChangePasswordDto) => usersApi.changePassword(data),
+    })
+}
+
+export function useUploadAvatar() {
+    const queryClient = useQueryClient()
+
+    return useMutation({
+        mutationFn: (file: File) => usersApi.uploadAvatar(file),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: userKeys.me })
+            queryClient.invalidateQueries({ queryKey: userKeys.all })
+            queryClient.invalidateQueries({ queryKey: projectKeys.all })
+            queryClient.invalidateQueries({ queryKey: taskKeys.all })
+        },
+    })
+}
+
+

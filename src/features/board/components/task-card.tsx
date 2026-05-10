@@ -5,6 +5,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { cn } from "@/lib/utils"
 import { Pencil } from "lucide-react"
 import type { Task } from "@/features/tasks/types/tasks.types"
+import { useTaskGithubItems } from "@/features/tasks/api/github-items.queries"
 
 declare global {
   interface Window {
@@ -108,12 +109,32 @@ export function TaskCard({ task, colorRGB, onEditTask, onOpenPanel }: TaskCardPr
     }
   }, [])
 
-  const mockScore = 40 + ((task.id * 17) % 61)
   const getScoreStyle = (score: number) => {
     if (score >= 80) return "text-emerald-400 bg-emerald-500/10 ring-emerald-500/20"
     if (score >= 50) return "text-amber-400 bg-amber-500/10 ring-amber-500/20"
     return "text-red-400 bg-red-500/10 ring-red-500/20"
   }
+
+  // Fetch linked items to aggregate score if not provided by backend
+  const { data: githubItems } = useTaskGithubItems(task.id)
+  
+  // Logic to determine what score to show
+  const displayScore = (() => {
+    // 1. Priority: Use backend aggregated scores if they exist
+    if (task.qualityScore !== null && task.qualityScore !== undefined) return task.qualityScore
+    if (task.codeScore !== null && task.codeScore !== undefined) return task.codeScore
+
+    // 2. Fallback: Aggregate from linked GitHub items on the frontend
+    if (githubItems && githubItems.length > 0) {
+      const itemsWithScore = githubItems.filter(item => item.codeScore !== null)
+      if (itemsWithScore.length === 0) return null
+      
+      const total = itemsWithScore.reduce((sum, item) => sum + (item.codeScore || 0), 0)
+      return Math.round(total / itemsWithScore.length)
+    }
+
+    return null
+  })()
 
   // Assignee display
   const assigneeName = task.assignee
@@ -199,13 +220,18 @@ export function TaskCard({ task, colorRGB, onEditTask, onOpenPanel }: TaskCardPr
           )}
         </div>
 
-        {/* Task Score */}
-        <div 
-          className={cn("flex shrink-0 h-6 w-6 items-center justify-center rounded-full ring-1 text-[9px] font-bold shadow-sm", getScoreStyle(mockScore))}
-          title="Task Health Score"
-        >
-          {mockScore}
-        </div>
+        {/* Task Score - Only show if analyzed */}
+        {displayScore !== null && (
+          <div 
+            className={cn(
+              "flex shrink-0 h-6 w-6 items-center justify-center rounded-full ring-1 text-[9px] font-bold shadow-sm", 
+              getScoreStyle(displayScore)
+            )}
+            title="Task Health Score (Calculated from linked items)"
+          >
+            {displayScore}
+          </div>
+        )}
       </div>
     </div>
   )

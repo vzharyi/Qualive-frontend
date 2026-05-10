@@ -51,6 +51,8 @@ export const taskSchema = z.object({
     order: z.number().optional(),
     githubCommitHash: z.string().nullable().optional(),
     linesOfCode: z.number().nullable().optional(),
+    qualityScore: z.number().nullable().optional(),
+    codeScore: z.number().nullable().optional(),
     createdAt: z.string(),
     updatedAt: z.string(),
     // Populated relations

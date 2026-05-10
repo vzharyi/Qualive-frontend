@@ -1,6 +1,11 @@
 import { z } from 'zod'
 
 export const updateUserSchema = z.object({
+    login: z
+        .string()
+        .min(3, 'Login must be at least 3 characters')
+        .max(100, 'Login must be at most 100 characters')
+        .optional(),
     firstName: z
         .string()
         .min(1, 'First name is required')
@@ -17,3 +22,10 @@ export const updateUserSchema = z.object({
 })
 
 export type UpdateUserDto = z.infer<typeof updateUserSchema>
+
+export const changePasswordSchema = z.object({
+    oldPassword: z.string().min(1, 'Current password is required'),
+    newPassword: z.string().min(8, 'New password must be at least 8 characters'),
+})
+
+export type ChangePasswordDto = z.infer<typeof changePasswordSchema>

@@ -1,10 +1,19 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Columns3, Flag, Users, CalendarDays, GitCommitHorizontal } from 'lucide-react'
+import { Columns3, Flag, Users, CalendarDays, GitCommitHorizontal, MessageSquare } from 'lucide-react'
 import type { Task, Column } from '@/features/tasks/types/tasks.types'
 import type { ProjectMember } from '@/features/projects/types/projects.types'
 import { useUpdateTask } from '@/features/tasks/api/tasks.queries'
 import { TaskGithubSection } from './task-github-section'
+import { TaskCommentsSection } from './task-comments-section'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+import { cn } from "@/lib/utils"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 
 const PRIORITIES = [
     { value: 'HIGH', label: 'High', dot: 'bg-red-500', text: 'text-red-400', bg: 'bg-red-500/15' },
@@ -45,6 +54,8 @@ export function TaskEditPanel({
     const [priority, setPriority] = useState<string>('MEDIUM')
     const [columnId, setColumnId] = useState<number | ''>(columns[0]?.id ?? '')
     const [githubCommitHash, setGithubCommitHash] = useState('')
+    const [showGithub, setShowGithub] = useState(false)
+    const [showComments, setShowComments] = useState(false)
 
     const updateTask = useUpdateTask()
 
@@ -59,6 +70,7 @@ export function TaskEditPanel({
             setPriority(task.priority || 'MEDIUM')
             setColumnId(task.columnId)
             setGithubCommitHash(task.githubCommitHash || '')
+            setShowGithub(false)
             hasChanges.current = false
         } else {
             setTitle('')
@@ -67,6 +79,7 @@ export function TaskEditPanel({
             setPriority('MEDIUM')
             setColumnId(columns[0]?.id ?? '')
             setGithubCommitHash('')
+            setShowGithub(false)
             hasChanges.current = false
         }
     }, [task, columns])
@@ -152,8 +165,8 @@ export function TaskEditPanel({
                         className="fixed right-8 top-1/2 z-50 flex w-[670px] h-[720px] flex-col rounded-2xl border border-white/[0.08] bg-[#181818] shadow-2xl shadow-black/50"
                         onClick={(e) => e.stopPropagation()}
                     >
-                        {/* Body — scrollable */}
-                        <div className="flex-1 overflow-auto px-7 pt-7 pb-6">
+                        {/* Body — no full scroll */}
+                        <div className="flex-1 flex flex-col px-7 pt-7 pb-6 overflow-hidden">
                             {/* Title — large, borderless */}
                             <input
                                 type="text"
@@ -165,7 +178,7 @@ export function TaskEditPanel({
                             />
 
                             {/* Metadata — table-like: headers row + values row */}
-                            <div className="grid grid-cols-5 gap-x-6  gap-y-2 mb-6">
+                            <div className="grid grid-cols-5 gap-x-6 gap-y-2 mb-6">
                                 {/* Header row */}
                                 <div className="flex items-center gap-1.5 text-[11px] font-medium uppercase tracking-wider text-zinc-500">
                                     <Columns3 className="h-3.5 w-3.5" />
@@ -192,65 +205,105 @@ export function TaskEditPanel({
 
                                 {/* Column — styled like kanban column header chip */}
                                 <div>
-                                    <div
-                                        className="relative inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[12px] font-medium cursor-pointer"
-                                        style={{
-                                            backgroundColor: `rgba(${columnRGB}, 0.12)`,
-                                            color: `rgb(${columnRGB})`,
-                                        }}
-                                    >
-                                        <div className="h-2 w-2 rounded-full flex-shrink-0" style={{ backgroundColor: `rgb(${columnRGB})` }} />
-                                        <select
-                                            value={columnId}
-                                            onChange={(e) => handleColumnChange(e.target.value)}
-                                            className="appearance-none bg-transparent focus:outline-none cursor-pointer text-[12px] font-medium pr-1"
-                                            style={{ color: `rgb(${columnRGB})` }}
-                                        >
+                                    <DropdownMenu>
+                                        <DropdownMenuTrigger asChild>
+                                            <div
+                                                className="relative inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[12px] font-medium cursor-pointer"
+                                                style={{
+                                                    backgroundColor: `rgba(${columnRGB}, 0.12)`,
+                                                    color: `rgb(${columnRGB})`,
+                                                }}
+                                            >
+                                                <div className="h-2 w-2 rounded-full flex-shrink-0" style={{ backgroundColor: `rgb(${columnRGB})` }} />
+                                                <span className="pr-1">{currentColumn?.name || "Status"}</span>
+                                            </div>
+                                        </DropdownMenuTrigger>
+                                        <DropdownMenuContent className="bg-[#1e1e1e] border-white/[0.08] p-1 shadow-2xl rounded-xl">
                                             {columns.map((c) => (
-                                                <option key={c.id} value={c.id} className="bg-[#1e1e1e] text-white">
-                                                    {c.name}
-                                                </option>
+                                                <DropdownMenuItem
+                                                    key={c.id}
+                                                    onClick={() => handleColumnChange(String(c.id))}
+                                                    className="flex items-center gap-2 px-3 py-2 rounded-lg text-zinc-400 focus:bg-white/[0.03] focus:text-zinc-200 cursor-pointer"
+                                                >
+                                                    <div className="h-2 w-2 rounded-full" style={{ backgroundColor: c.color || '#fff' }} />
+                                                    <span className="text-[13px]">{c.name}</span>
+                                                </DropdownMenuItem>
                                             ))}
-                                        </select>
-                                    </div>
+                                        </DropdownMenuContent>
+                                    </DropdownMenu>
                                 </div>
 
                                 {/* Assignee */}
                                 <div className="flex items-center gap-1.5 min-w-0">
-                                    {selectedAssignee && (
-                                        <div className="flex h-5 w-5 items-center justify-center rounded-full bg-zinc-700 text-[10px] font-bold text-white shrink-0">
-                                            {getMemberName(selectedAssignee).charAt(0).toUpperCase()}
-                                        </div>
-                                    )}
-                                    <select
-                                        value={assigneeId}
-                                        onChange={(e) => handleAssigneeChange(e.target.value)}
-                                        className="appearance-none bg-transparent text-[13px] text-zinc-300 focus:outline-none cursor-pointer min-w-0 max-w-[80px] truncate"
-                                    >
-                                        <option value="" className="bg-[#1e1e1e]">Unassigned</option>
-                                        {members.map((m) => (
-                                            <option key={m.userId} value={m.userId} className="bg-[#1e1e1e]">
-                                                {getMemberName(m)}
-                                            </option>
-                                        ))}
-                                    </select>
+                                    <DropdownMenu>
+                                        <DropdownMenuTrigger asChild>
+                                            <div className="flex items-center gap-1.5 cursor-pointer min-w-0">
+                                                {selectedAssignee ? (
+                                                    <Avatar className="h-5 w-5 shrink-0 ring-1 ring-[#181818]">
+                                                        {selectedAssignee.user?.avatarUrl && <AvatarImage src={selectedAssignee.user.avatarUrl} />}
+                                                        <AvatarFallback className="bg-zinc-700 text-[10px] font-bold text-white">
+                                                            {getMemberName(selectedAssignee).charAt(0).toUpperCase()}
+                                                        </AvatarFallback>
+                                                    </Avatar>
+                                                ) : (
+                                                    <div className="flex h-5 w-5 items-center justify-center rounded-full bg-zinc-800 text-[10px] font-bold text-zinc-500 shrink-0">
+                                                        ?
+                                                    </div>
+                                                )}
+                                                <span className="text-[13px] text-zinc-300 truncate max-w-[80px]">
+                                                    {selectedAssignee ? getMemberName(selectedAssignee) : "Unassigned"}
+                                                </span>
+                                            </div>
+                                        </DropdownMenuTrigger>
+                                        <DropdownMenuContent className="bg-[#1e1e1e] border-white/[0.08] p-1 shadow-2xl rounded-xl">
+                                            <DropdownMenuItem
+                                                onClick={() => handleAssigneeChange("")}
+                                                className="px-3 py-2 rounded-lg text-zinc-400 focus:bg-white/[0.03] focus:text-zinc-200 cursor-pointer"
+                                            >
+                                                Unassigned
+                                            </DropdownMenuItem>
+                                            {members.map((m) => (
+                                                <DropdownMenuItem
+                                                    key={m.userId}
+                                                    onClick={() => handleAssigneeChange(String(m.userId))}
+                                                    className="flex items-center gap-2 px-3 py-2 rounded-lg text-zinc-400 focus:bg-white/[0.03] focus:text-zinc-200 cursor-pointer"
+                                                >
+                                                    <Avatar className="h-5 w-5 shrink-0 ring-1 ring-[#1e1e1e]">
+                                                        {m.user?.avatarUrl && <AvatarImage src={m.user.avatarUrl} />}
+                                                        <AvatarFallback className="bg-zinc-700 text-[10px] font-bold text-white">
+                                                            {getMemberName(m).charAt(0).toUpperCase()}
+                                                        </AvatarFallback>
+                                                    </Avatar>
+                                                    <span className="text-[13px]">{getMemberName(m)}</span>
+                                                </DropdownMenuItem>
+                                            ))}
+                                        </DropdownMenuContent>
+                                    </DropdownMenu>
                                 </div>
 
                                 {/* Priority — styled chip */}
                                 <div>
-                                    <div className={`inline-flex items-center gap-1 rounded-md px-2.5 py-1 ${currentPriority?.bg || ''}`}>
-                                        <select
-                                            value={priority}
-                                            onChange={(e) => handlePriorityChange(e.target.value)}
-                                            className={`appearance-none bg-transparent text-[12px] font-medium focus:outline-none cursor-pointer ${currentPriority?.text || 'text-zinc-400'}`}
-                                        >
+                                    <DropdownMenu>
+                                        <DropdownMenuTrigger asChild>
+                                            <div className={`inline-flex items-center gap-1 rounded-md px-2.5 py-1 ${currentPriority?.bg || ''} cursor-pointer`}>
+                                                <span className={`text-[12px] font-medium ${currentPriority?.text || 'text-zinc-400'}`}>
+                                                    {currentPriority?.label || 'Select'}
+                                                </span>
+                                            </div>
+                                        </DropdownMenuTrigger>
+                                        <DropdownMenuContent className="bg-[#1e1e1e] border-white/[0.08] p-1 shadow-2xl rounded-xl">
                                             {PRIORITIES.map((p) => (
-                                                <option key={p.value} value={p.value} className="bg-[#1e1e1e] text-white">
-                                                    {p.label}
-                                                </option>
+                                                <DropdownMenuItem
+                                                    key={p.value}
+                                                    onClick={() => handlePriorityChange(p.value)}
+                                                    className="flex items-center gap-2 px-3 py-2 rounded-lg text-zinc-400 focus:bg-white/[0.03] focus:text-zinc-200 cursor-pointer"
+                                                >
+                                                    <div className={`h-2 w-2 rounded-full ${p.dot}`} />
+                                                    <span className="text-[13px]">{p.label}</span>
+                                                </DropdownMenuItem>
                                             ))}
-                                        </select>
-                                    </div>
+                                        </DropdownMenuContent>
+                                    </DropdownMenu>
                                 </div>
 
                                 {/* End date — clickable date input */}
@@ -282,18 +335,57 @@ export function TaskEditPanel({
                                 value={description}
                                 onChange={(e) => handleDescriptionChange(e.target.value)}
                                 placeholder="Write your notes here..."
-                                className="w-full bg-transparent text-[14px] text-zinc-300 placeholder:text-zinc-600 focus:outline-none resize-none leading-relaxed min-h-[120px]"
+                                className="w-full bg-transparent text-[14px] text-zinc-300 placeholder:text-zinc-600 focus:outline-none resize-none leading-relaxed min-h-[120px] flex-1"
                             />
-
-                            {/* GitHub Items section — only when editing existing task */}
-                            {isEditing && task && (
-                                <>
-                                    <div className="border-t border-white/[0.06] my-5" />
-                                    <TaskGithubSection taskId={task.id} projectId={task.projectId} />
-                                </>
-                            )}
                         </div>
-                    </motion.div>
+                        
+                        {/* Sticky Footer for GitHub Links & Comments */}
+                        {isEditing && task && (
+                            <div className="border-t border-white/[0.06] px-7 py-4 bg-[#181818] rounded-b-2xl mt-auto shrink-0 z-10">
+                                <div className="flex gap-4 mb-2">
+                                    <button
+                                        onClick={() => { setShowGithub(!showGithub); setShowComments(false); }}
+                                        className={cn(
+                                            "flex items-center justify-center flex-1 gap-2 text-[13px] font-medium transition-colors cursor-pointer py-1.5 rounded-md",
+                                            showGithub ? "text-white bg-white/[0.04]" : "text-zinc-500 hover:text-zinc-300"
+                                        )}
+                                    >
+                                        <GitCommitHorizontal className="h-4 w-4" />
+                                        {showGithub ? 'Hide Linked Code' : 'Show Linked Code'}
+                                    </button>
+                                    <button
+                                        onClick={() => { setShowComments(!showComments); setShowGithub(false); }}
+                                        className={cn(
+                                            "flex items-center justify-center flex-1 gap-2 text-[13px] font-medium transition-colors cursor-pointer py-1.5 rounded-md",
+                                            showComments ? "text-white bg-white/[0.04]" : "text-zinc-500 hover:text-zinc-300"
+                                        )}
+                                    >
+                                        <MessageSquare className="h-4 w-4" />
+                                        {showComments ? 'Hide Comments' : 'Show Comments'}
+                                    </button>
+                                </div>
+                                <AnimatePresence>
+                                    {(showGithub || showComments) && (
+                                        <motion.div
+                                            initial={{ opacity: 0, y: 20, height: 0 }}
+                                            animate={{ opacity: 1, y: 0, height: 'auto' }}
+                                            exit={{ opacity: 0, y: 20, height: 0 }}
+                                            transition={{ type: "spring", damping: 26, stiffness: 300 }}
+                                            className="overflow-hidden"
+                                        >
+                                            <div className="pt-4 mt-2 border-t border-white/[0.04]">
+                                                {showGithub ? (
+                                                    <TaskGithubSection taskId={task.id} projectId={task.projectId} />
+                                                ) : (
+                                                    /* Mock Comments Section */
+                                                    <TaskCommentsSection taskId={task.id} />
+                                                )}
+                                            </div>
+                                        </motion.div>
+                                    )}
+                                </AnimatePresence>
+                            </div>
+                        )}</motion.div>
                 </>
             )}
         </AnimatePresence>

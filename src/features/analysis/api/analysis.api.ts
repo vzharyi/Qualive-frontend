@@ -1,5 +1,10 @@
 import { api } from '@/api/axios-instance'
-import type { AnalysisReport, AnalysisDefect } from '../types/analysis.types'
+import type { 
+    AnalysisReport, 
+    AnalysisDefect,
+    PublicAnalysisRequest,
+    PublicAnalysisResponse
+} from '../types/analysis.types'
 
 export const analysisApi = {
     // GET /analysis/reports/:taskId
@@ -13,4 +18,10 @@ export const analysisApi = {
         const response = await api.get<AnalysisDefect[]>(`/analysis/defects/${reportId}`)
         return response.data
     },
+
+    // POST /analysis/test (Public)
+    testCode: async (data: PublicAnalysisRequest): Promise<PublicAnalysisResponse> => {
+        const response = await api.post<PublicAnalysisResponse>('/analysis/test', data)
+        return response.data
+    }
 }

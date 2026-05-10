@@ -12,48 +12,15 @@ const defaultCode = `function processUserData(data: any) {
   return result;
 }`
 
-interface AnalysisError {
-    severity: "error" | "warning"
-    rule: string
-    message: string
-    line: number
-    points: number
-}
-
-function analyzeCode(code: string): AnalysisError[] {
-    const errors: AnalysisError[] = []
-    const lines = code.split("\n")
-
-    lines.forEach((line, idx) => {
-        const lineNum = idx + 1
-        if (/:\s*any\b/.test(line)) {
-            errors.push({ severity: "error", rule: "no-explicit-any", message: "Unexpected 'any'. Specify a type.", line: lineNum, points: -5 })
-        }
-        if (/console\.(log|warn|error|info)\s*\(/.test(line)) {
-            errors.push({ severity: "warning", rule: "no-console", message: "Unexpected console statement.", line: lineNum, points: -2 })
-        }
-        if (/\bvar\s+/.test(line)) {
-            errors.push({ severity: "error", rule: "no-var", message: "Unexpected var, use let or const.", line: lineNum, points: -5 })
-        }
-        if (/[^=!]==[^=]/.test(line)) {
-            errors.push({ severity: "warning", rule: "eqeqeq", message: "Expected '===' but found '=='.", line: lineNum, points: -3 })
-        }
-        if (/eval\s*\(/.test(line)) {
-            errors.push({ severity: "error", rule: "no-eval", message: "eval() is not allowed.", line: lineNum, points: -10 })
-        }
-        if (line.length > 120) {
-            errors.push({ severity: "warning", rule: "max-len", message: "Line exceeds 120 characters.", line: lineNum, points: -1 })
-        }
-    })
-
-    return errors
-}
+import { analysisApi } from "../../analysis/api/analysis.api"
+import type { PublicAnalysisDefect } from "../../analysis/types/analysis.types"
 
 export function LiveDemoSection() {
     const ref = useRef(null)
     const isInView = useInView(ref, { once: true, margin: "-100px" })
     const [code, setCode] = useState(defaultCode)
-    const [results, setResults] = useState<AnalysisError[]>([])
+    const [results, setResults] = useState<PublicAnalysisDefect[]>([])
+    const [qualityScore, setQualityScore] = useState<number>(100)
     const [analyzed, setAnalyzed] = useState(false)
     const [scanning, setScanning] = useState(false)
     const editorRef = useRef<HTMLTextAreaElement>(null)
@@ -66,16 +33,21 @@ export function LiveDemoSection() {
         }
     }, [])
 
-    const handleAnalyze = useCallback(() => {
+    const handleAnalyze = useCallback(async () => {
         if (scanning) return
         setScanning(true)
         setAnalyzed(false)
-        setTimeout(() => {
-            const found = analyzeCode(code)
-            setResults(found)
-            setScanning(false)
+        try {
+            const response = await analysisApi.testCode({ code, fileName: "test.ts" })
+            setResults(response.defects)
+            setQualityScore(response.qualityScore)
             setAnalyzed(true)
-        }, 1500)
+        } catch (error) {
+            console.error("Failed to analyze code:", error)
+            // Fallback or show error briefly
+        } finally {
+            setScanning(false)
+        }
     }, [code, scanning])
 
     const handleFileOpen = useCallback(() => {
@@ -97,15 +69,15 @@ export function LiveDemoSection() {
         input.click()
     }, [])
 
-    const score = Math.max(0, 100 + results.reduce((sum, e) => sum + e.points, 0))
+    const score = qualityScore
     const scoreColor = score >= 90 ? "text-emerald-400" : score >= 70 ? "text-yellow-400" : "text-rose-400"
     const scoreBorder = score >= 90 ? "border-emerald-500/30" : score >= 70 ? "border-yellow-500/30" : "border-rose-500/30"
     const scoreBg = score >= 90 ? "bg-emerald-500/10" : score >= 70 ? "bg-yellow-500/10" : "bg-rose-500/10"
 
     const errorMap = analyzed ? results.reduce((acc, err) => {
-        if (!acc[err.line] || err.severity === "error") acc[err.line] = err.severity;
+        if (!acc[err.line] || err.severity === "ERROR") acc[err.line] = err.severity;
         return acc;
-    }, {} as Record<number, "error" | "warning">) : {} as Record<number, "error" | "warning">;
+    }, {} as Record<number, string>) : {} as Record<number, string>;
 
     return (
         <section id="demo" className="py-32 relative" ref={ref}>
@@ -204,10 +176,10 @@ export function LiveDemoSection() {
                                             const severity = errorMap[i + 1]
                                             return (
                                                 <div key={i} className="flex min-h-[24px]">
-                                                    <div className={`w-12 pr-3 text-right text-[10px] font-mono leading-6 shrink-0 border-r border-white/5 bg-[#111115] ${severity === "error" ? "text-rose-400" : severity === "warning" ? "text-yellow-400" : "text-zinc-600"}`}>
+                                                    <div className={`w-12 pr-3 text-right text-[10px] font-mono leading-6 shrink-0 border-r border-white/5 bg-[#111115] ${severity === "ERROR" ? "text-rose-400" : severity === "WARNING" ? "text-yellow-400" : "text-zinc-600"}`}>
                                                         {i + 1}
                                                     </div>
-                                                    <div className={`flex-1 px-4 relative whitespace-pre-wrap break-words font-mono text-sm leading-6 ${severity === "error" ? "bg-rose-500/10" : severity === "warning" ? "bg-yellow-500/10" : ""}`}>
+                                                    <div className={`flex-1 px-4 relative whitespace-pre-wrap break-words font-mono text-sm leading-6 ${severity === "ERROR" ? "bg-rose-500/10" : severity === "WARNING" ? "bg-yellow-500/10" : ""}`}>
                                                         <span className="invisible">{line || " "}</span>
                                                     </div>
                                                 </div>
@@ -286,25 +258,24 @@ export function LiveDemoSection() {
                                             <div className="space-y-2 max-h-[300px] overflow-y-auto overflow-x-hidden custom-scrollbar">
                                                 {results.map((err, i) => (
                                                     <motion.div
-                                                        key={`${err.line}-${err.rule}-${i}`}
+                                                        key={`${err.line}-${err.ruleId}-${i}`}
                                                         initial={{ opacity: 0, x: 20 }}
                                                         animate={{ opacity: 1, x: 0 }}
                                                         transition={{ delay: i * 0.08 }}
                                                         className="flex items-start gap-3 p-3 rounded-lg bg-white/[0.02] border border-white/5"
                                                     >
-                                                        <span className={`text-xs font-mono px-1.5 py-0.5 rounded shrink-0 ${err.severity === "error"
+                                                        <span className={`text-xs font-mono px-1.5 py-0.5 rounded shrink-0 ${err.severity === "ERROR"
                                                             ? "bg-rose-500/10 text-rose-400"
                                                             : "bg-yellow-500/10 text-yellow-400"
                                                             }`}>
-                                                            {err.severity === "error" ? "ERR" : "WARN"}
+                                                            {err.severity === "ERROR" ? "ERR" : "WARN"}
                                                         </span>
                                                         <div className="flex-1 min-w-0">
                                                             <p className="text-sm text-zinc-300">{err.message}</p>
                                                             <p className="text-xs text-zinc-600 font-mono mt-0.5">
-                                                                Line {err.line} · {err.rule}
+                                                                Line {err.line} · {err.ruleId}
                                                             </p>
                                                         </div>
-                                                        <span className="text-xs font-mono text-rose-400 shrink-0">{err.points}pt</span>
                                                     </motion.div>
                                                 ))}
                                             </div>
