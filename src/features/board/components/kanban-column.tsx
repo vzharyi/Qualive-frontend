@@ -1,10 +1,11 @@
 import React, { useState, useRef, useEffect } from "react"
 import { Reorder, useDragControls } from "framer-motion"
 import { TaskCard } from "@/features/board/components/task-card"
-import { Plus, Pencil, Search, Users, CircleDot, X, Settings } from "lucide-react"
+import { Plus, Users, CircleDot, X, Settings, ExternalLink, Trash2, Pencil } from "lucide-react"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import type { Task, Column } from "@/features/tasks/types/tasks.types"
 import type { ProjectMember } from "@/features/projects/types/projects.types"
-import { useCreateTask, useUpdateTask, useUpdateColumn } from "@/features/tasks/api/tasks.queries"
+import { useCreateTask, useUpdateTask, useUpdateColumn, useDeleteTask } from "@/features/tasks/api/tasks.queries"
 import { cn } from "@/lib/utils"
 // import { ColorPicker } from "@/components/ui/color-picker"
 import { ColumnEditPanel } from "./column-edit-panel"
@@ -69,6 +70,7 @@ export function KanbanColumn({
   const createTask = useCreateTask()
   const updateTask = useUpdateTask()
   const updateColumn = useUpdateColumn()
+  const deleteTask = useDeleteTask()
 
   // Inline column rename state
   const [isEditingName, setIsEditingName] = useState(false)
@@ -100,6 +102,18 @@ export function KanbanColumn({
 
   const [isSettingsOpen, setIsSettingsOpen] = useState(false)
   const [anchorRect, setAnchorRect] = useState<DOMRect | null>(null)
+  
+  const [contextMenuTask, setContextMenuTask] = useState<{ task: Task, x: number, y: number } | null>(null)
+
+  useEffect(() => {
+    const handleClose = () => setContextMenuTask(null)
+    window.addEventListener('click', handleClose)
+    window.addEventListener('mousedown', handleClose)
+    return () => {
+      window.removeEventListener('click', handleClose)
+      window.removeEventListener('mousedown', handleClose)
+    }
+  }, [])
 
   const resetForm = () => {
     setShowInlineCreate(false)
@@ -466,137 +480,140 @@ export function KanbanColumn({
               <React.Fragment key={task.id}>
                 <div
                   ref={editFormRef}
-                  className="rounded-xl border p-3"
+                  className="rounded-xl border p-3.5 space-y-3"
                   style={{
                     background: `linear-gradient(rgba(${colorRGB}, 0.06), rgba(${colorRGB}, 0.06)), #181818`,
                     borderColor: `rgba(${colorRGB}, 0.3)`,
                   }}
                 >
                   {/* Title */}
-                  <div className="flex items-center gap-2.5 py-2">
-                    <Pencil className="h-4 w-4 text-emerald-400 shrink-0" />
-                    <input
-                      type="text"
-                      value={editTitle}
-                      onChange={(e) => setEditTitle(e.target.value)}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter") handleEditSave()
-                        if (e.key === "Escape") resetEditForm()
-                      }}
-                      placeholder="Task name..."
-                      autoFocus
-                      className="w-full bg-transparent text-[13px] text-white placeholder:text-zinc-500 focus:outline-none"
-                    />
-                  </div>
+                  <input
+                    type="text"
+                    value={editTitle}
+                    onChange={(e) => setEditTitle(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") handleEditSave()
+                      if (e.key === "Escape") resetEditForm()
+                    }}
+                    placeholder="Task name..."
+                    autoFocus
+                    className="w-full bg-transparent text-[14px] font-medium text-white placeholder:text-zinc-600 focus:outline-none"
+                  />
 
-                  <div className="h-px bg-white/[0.06]" />
-
-                  {/* Assignee */}
-                  <div className="relative h-[36px]">
-                    {!showEditAssigneePicker ? (
+                  {/* Chips row */}
+                  <div className="flex items-center gap-2 flex-wrap">
+                    {/* Assignee chip */}
+                    <div className="relative picker-trigger">
                       <button
-                        onClick={() => { setShowEditAssigneePicker(true); setShowEditPriorityPicker(false) }}
-                        className="absolute inset-0 flex items-center gap-2.5 text-[13px] text-zinc-400 hover:text-zinc-200 transition-colors cursor-pointer picker-trigger"
+                        onClick={() => { setShowEditAssigneePicker(!showEditAssigneePicker); setShowEditPriorityPicker(false) }}
+                        className={cn(
+                          "flex items-center gap-1.5 h-7 px-2.5 rounded-full text-[12px] font-medium border transition-all cursor-pointer picker-trigger",
+                          editAssigneeId
+                            ? "bg-blue-500/10 border-blue-500/20 text-blue-300"
+                            : "bg-white/[0.04] border-white/[0.08] text-zinc-500 hover:text-zinc-300 hover:bg-white/[0.06]"
+                        )}
                       >
-                        <Users className="h-4 w-4 shrink-0" />
-                        <span>{members.find((m) => m.userId === editAssigneeId) ? getMemberName(members.find((m) => m.userId === editAssigneeId)!) : "Assignee"}</span>
+                        {editAssigneeId && members.find(m => m.userId === editAssigneeId) ? (
+                          <>
+                            <Avatar className="h-4 w-4 shrink-0">
+                              {members.find(m => m.userId === editAssigneeId)?.user?.avatarUrl && (
+                                <AvatarImage src={members.find(m => m.userId === editAssigneeId)!.user!.avatarUrl!} />
+                              )}
+                              <AvatarFallback className="text-[8px] bg-zinc-700 text-zinc-300">
+                                {(members.find(m => m.userId === editAssigneeId)?.user?.firstName?.charAt(0) || members.find(m => m.userId === editAssigneeId)?.user?.login?.charAt(0) || '?').toUpperCase()}
+                              </AvatarFallback>
+                            </Avatar>
+                            <span className="max-w-[80px] truncate">{getMemberName(members.find(m => m.userId === editAssigneeId)!)}</span>
+                            <button onClick={(e) => { e.stopPropagation(); setEditAssigneeId(null) }} className="ml-0.5 text-blue-400/60 hover:text-blue-300 transition-colors">
+                              <X className="h-3 w-3" />
+                            </button>
+                          </>
+                        ) : (
+                          <>
+                            <Users className="h-3.5 w-3.5" />
+                            Assignee
+                          </>
+                        )}
                       </button>
-                    ) : (
-                      <div className="absolute -inset-x-2.5 -top-2 z-30 rounded-xl border border-white/[0.08] bg-[#1e1e1e] shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-150 picker-container">
-                        <div className="flex items-center justify-between px-2.5 py-2 border-b border-white/[0.06] bg-white/[0.02]">
-                          <div className="flex items-center gap-2 min-w-0">
-                            <Users className="h-4 w-4 shrink-0 text-blue-400" />
-                            {editAssigneeId ? (
-                              <span className="text-[13px] text-white font-medium truncate">{getMemberName(members.find(m => m.userId === editAssigneeId)!)}</span>
-                            ) : (
-                              <span className="text-[13px] text-zinc-400">Select Assignee</span>
-                            )}
+                      {showEditAssigneePicker && (
+                        <div className="absolute left-0 top-full mt-1.5 z-40 w-52 rounded-xl border border-white/[0.1] bg-[#1a1a1a] shadow-2xl shadow-black/60 overflow-hidden picker-container">
+                          <div className="p-1.5 max-h-[180px] overflow-y-auto flex flex-col gap-0.5 [&::-webkit-scrollbar]:w-1 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-zinc-700 [&::-webkit-scrollbar-thumb]:rounded-full">
+                            {members.length === 0 ? (
+                              <div className="px-3 py-2 text-[12px] text-zinc-500">No members</div>
+                            ) : members.map((m) => (
+                              <button
+                                key={m.userId}
+                                onClick={() => { setEditAssigneeId(m.userId); setShowEditAssigneePicker(false) }}
+                                className={cn(
+                                  "w-full flex items-center gap-2.5 px-2.5 py-1 rounded-lg text-[13px] transition-colors cursor-pointer",
+                                  m.userId === editAssigneeId
+                                    ? "bg-blue-500/10 text-blue-300"
+                                    : "text-zinc-300 hover:bg-white/[0.06] hover:text-white"
+                                )}
+                              >
+                                <Avatar className="h-6 w-6 shrink-0">
+                                  {m.user?.avatarUrl && <AvatarImage src={m.user.avatarUrl} alt={getMemberName(m)} />}
+                                  <AvatarFallback className="text-[9px] bg-zinc-800 text-zinc-400">
+                                    {(m.user?.firstName?.charAt(0) || m.user?.login?.charAt(0) || '?').toUpperCase()}
+                                  </AvatarFallback>
+                                </Avatar>
+                                <span className="truncate">{getMemberName(m)}</span>
+                              </button>
+                            ))}
                           </div>
-                          {editAssigneeId && (
-                            <button
-                              onClick={(e) => { e.stopPropagation(); setEditAssigneeId(null); setShowEditAssigneePicker(false) }}
-                              className="shrink-0 ml-2 p-1 rounded-md text-zinc-500 hover:text-red-400 hover:bg-red-500/10 transition-colors"
-                            >
-                              <X className="h-3.5 w-3.5" />
-                            </button>
-                          )}
                         </div>
-                        <div className="p-1 max-h-[200px] overflow-y-auto">
-                          {!editAssigneeId && members.length === 0 && (
-                            <div className="px-2.5 py-2 text-[12px] text-zinc-500">No members available</div>
-                          )}
-                          {members.filter(m => m.userId !== editAssigneeId).map((m) => (
-                            <button
-                              key={m.userId}
-                              onClick={() => { setEditAssigneeId(m.userId); setShowEditAssigneePicker(false) }}
-                              className="w-full flex items-center px-2 py-1.5 rounded-md text-[13px] text-zinc-300 hover:bg-white/[0.06] hover:text-white transition-colors cursor-pointer"
-                            >
-                              <span className="truncate ml-6">{getMemberName(m)}</span>
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                  </div>
+                      )}
+                    </div>
 
-                  <div className="h-px bg-white/[0.06]" />
-
-                  {/* Priority */}
-                  <div className="relative h-[36px]">
-                    {!showEditPriorityPicker ? (
+                    {/* Priority chip */}
+                    <div className="relative picker-trigger">
                       <button
-                        onClick={() => { setShowEditPriorityPicker(true); setShowEditAssigneePicker(false) }}
-                        className="absolute inset-0 flex items-center gap-2.5 text-[13px] text-zinc-400 hover:text-zinc-200 transition-colors cursor-pointer picker-trigger"
+                        onClick={() => { setShowEditPriorityPicker(!showEditPriorityPicker); setShowEditAssigneePicker(false) }}
+                        className={cn(
+                          "flex items-center gap-1.5 h-7 px-2.5 rounded-full text-[12px] font-medium border transition-all cursor-pointer picker-trigger",
+                          editPriority === 'HIGH' ? "bg-red-500/10 border-red-500/20 text-red-400" :
+                          editPriority === 'MEDIUM' ? "bg-amber-500/10 border-amber-500/20 text-amber-400" :
+                          editPriority === 'LOW' ? "bg-zinc-500/10 border-zinc-500/20 text-zinc-400" :
+                          "bg-white/[0.04] border-white/[0.08] text-zinc-500 hover:text-zinc-300 hover:bg-white/[0.06]"
+                        )}
                       >
-                        <CircleDot className="h-4 w-4 shrink-0" />
-                        <span className="flex items-center gap-1.5">
-                          {editPriority ? (
-                            <>
-                              <span className={cn("h-2 w-2 rounded-full", priorityOptions.find((p) => p.value === editPriority)?.color)} />
-                              {priorityOptions.find((p) => p.value === editPriority)?.label}
-                            </>
-                          ) : "Priority"}
-                        </span>
-                      </button>
-                    ) : (
-                      <div className="absolute -inset-x-2.5 -top-2 z-30 rounded-xl border border-white/[0.08] bg-[#1e1e1e] shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-150 picker-container">
-                        <div className="flex items-center justify-between px-2.5 py-2 border-b border-white/[0.06] bg-white/[0.02]">
-                          <div className="flex items-center gap-2 min-w-0">
-                            <CircleDot className="h-4 w-4 shrink-0 text-amber-400" />
-                            {editPriority ? (
-                              <div className="flex items-center gap-1.5">
-                                <span className={cn("h-2 w-2 rounded-full", priorityOptions.find((p) => p.value === editPriority)?.color)} />
-                                <span className="text-[13px] text-white font-medium truncate">{priorityOptions.find(p => p.value === editPriority)?.label}</span>
-                              </div>
-                            ) : (
-                              <span className="text-[13px] text-zinc-400">Select Priority</span>
-                            )}
-                          </div>
-                          {editPriority && (
-                            <button
-                              onClick={(e) => { e.stopPropagation(); setEditPriority(null); setShowEditPriorityPicker(false) }}
-                              className="shrink-0 ml-2 p-1 rounded-md text-zinc-500 hover:text-red-400 hover:bg-red-500/10 transition-colors"
-                            >
-                              <X className="h-3.5 w-3.5" />
+                        {editPriority ? (
+                          <>
+                            <span className={cn("h-1.5 w-1.5 rounded-full shrink-0", priorityOptions.find(p => p.value === editPriority)?.color)} />
+                            {priorityOptions.find(p => p.value === editPriority)?.label}
+                            <button onClick={(e) => { e.stopPropagation(); setEditPriority(null) }} className="ml-0.5 opacity-60 hover:opacity-100 transition-opacity">
+                              <X className="h-3 w-3" />
                             </button>
-                          )}
-                        </div>
-                        <div className="p-1">
-                          {priorityOptions.filter(p => p.value !== editPriority).map((p) => (
-                            <button
-                              key={p.value}
-                              onClick={() => { setEditPriority(p.value); setShowEditPriorityPicker(false) }}
-                              className="w-full flex items-center px-2 py-1.5 rounded-md text-[13px] text-zinc-300 hover:bg-white/[0.06] hover:text-white transition-colors cursor-pointer"
-                            >
-                              <div className="flex items-center gap-2 ml-6">
-                                <span className={cn("h-2 w-2 rounded-full", p.color)} />
+                          </>
+                        ) : (
+                          <>
+                            <CircleDot className="h-3.5 w-3.5" />
+                            Priority
+                          </>
+                        )}
+                      </button>
+                      {showEditPriorityPicker && (
+                        <div className="absolute left-0 top-full mt-1.5 z-40 w-40 rounded-xl border border-white/[0.1] bg-[#1a1a1a] shadow-2xl shadow-black/60 overflow-hidden picker-container">
+                          <div className="p-1.5 flex flex-col gap-0.5">
+                            {priorityOptions.map((p) => (
+                              <button
+                                key={p.value}
+                                onClick={() => { setEditPriority(p.value); setShowEditPriorityPicker(false) }}
+                                className={cn(
+                                  "w-full flex items-center gap-2.5 px-2.5 py-1 rounded-lg text-[13px] transition-colors cursor-pointer",
+                                  p.value === editPriority
+                                    ? "bg-white/[0.08] text-white"
+                                    : "text-zinc-300 hover:bg-white/[0.06] hover:text-white"
+                                )}
+                              >
+                                <span className={cn("h-2 w-2 rounded-full shrink-0", p.color)} />
                                 {p.label}
-                              </div>
-                            </button>
-                          ))}
+                              </button>
+                            ))}
+                          </div>
                         </div>
-                      </div>
-                    )}
+                      )}
+                    </div>
                   </div>
                 </div>
                 {isLastInPriority && (
@@ -621,6 +638,7 @@ export function KanbanColumn({
                   colorRGB={colorRGB}
                   onEditTask={handleInlineEditTask}
                   onOpenPanel={onOpenPanel}
+                  onContextMenu={(task, x, y) => setContextMenuTask({ task, x, y })}
                 />
               </div>
               {isLastInPriority && (
@@ -639,137 +657,144 @@ export function KanbanColumn({
         {showInlineCreate && (
           <div
             ref={formRef}
-            className="rounded-xl border p-3"
+            className="rounded-xl border p-3.5 space-y-3"
             style={{
               background: `linear-gradient(rgba(${colorRGB}, 0.06), rgba(${colorRGB}, 0.06)), #181818`,
               borderColor: `rgba(${colorRGB}, 0.2)`,
             }}
           >
             {/* Title */}
-            <div className="flex items-center gap-2.5 py-2">
-              <Search className="h-4 w-4 text-blue-400 shrink-0" />
-              <input
-                type="text"
-                value={inlineTitle}
-                onChange={(e) => setInlineTitle(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") handleSave()
-                  if (e.key === "Escape") resetForm()
-                }}
-                placeholder="Type a name..."
-                autoFocus
-                className="w-full bg-transparent text-[13px] text-white placeholder:text-zinc-500 focus:outline-none"
-              />
-            </div>
+            <input
+              type="text"
+              value={inlineTitle}
+              onChange={(e) => setInlineTitle(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") handleSave()
+                if (e.key === "Escape") resetForm()
+              }}
+              placeholder="Task name..."
+              autoFocus
+              className="w-full bg-transparent text-[14px] font-medium text-white placeholder:text-zinc-600 focus:outline-none"
+            />
 
-            <div className="h-px bg-white/[0.06]" />
-
-            {/* Assignee */}
-            <div className="relative h-[36px]">
-              {!showAssigneePicker ? (
+            {/* Chips row */}
+            <div className="flex items-center gap-2 flex-wrap">
+              {/* Assignee chip */}
+              <div className="relative picker-trigger">
                 <button
-                  onClick={() => { setShowAssigneePicker(true); setShowPriorityPicker(false) }}
-                  className="absolute inset-0 flex items-center gap-2.5 text-[13px] text-zinc-400 hover:text-zinc-200 transition-colors cursor-pointer picker-trigger"
+                  onClick={() => { setShowAssigneePicker(!showAssigneePicker); setShowPriorityPicker(false) }}
+                  className={cn(
+                    "flex items-center gap-1.5 h-7 px-2.5 rounded-full text-[12px] font-medium border transition-all cursor-pointer picker-trigger",
+                    inlineAssigneeId
+                      ? "bg-blue-500/10 border-blue-500/20 text-blue-300"
+                      : "bg-white/[0.04] border-white/[0.08] text-zinc-500 hover:text-zinc-300 hover:bg-white/[0.06]"
+                  )}
                 >
-                  <Users className="h-4 w-4 shrink-0" />
-                  <span>{selectedAssignee ? getMemberName(selectedAssignee) : "Add Assignee"}</span>
+                  {inlineAssigneeId && selectedAssignee ? (
+                    <>
+                      <Avatar className="h-4 w-4 shrink-0">
+                        {selectedAssignee.user?.avatarUrl && <AvatarImage src={selectedAssignee.user.avatarUrl} />}
+                        <AvatarFallback className="text-[8px] bg-zinc-700 text-zinc-300">
+                          {(selectedAssignee.user?.firstName?.charAt(0) || selectedAssignee.user?.login?.charAt(0) || '?').toUpperCase()}
+                        </AvatarFallback>
+                      </Avatar>
+                      <span className="max-w-[80px] truncate">{getMemberName(selectedAssignee)}</span>
+                      <button
+                        onClick={(e) => { e.stopPropagation(); setInlineAssigneeId(null) }}
+                        className="ml-0.5 text-blue-400/60 hover:text-blue-300 transition-colors"
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <Users className="h-3.5 w-3.5" />
+                      Assignee
+                    </>
+                  )}
                 </button>
-              ) : (
-                <div className="absolute -inset-x-2.5 -top-2 z-30 rounded-xl border border-white/[0.08] bg-[#1e1e1e] shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-150 picker-container">
-                  <div className="flex items-center justify-between px-2.5 py-2 border-b border-white/[0.06] bg-white/[0.02]">
-                    <div className="flex items-center gap-2 min-w-0">
-                      <Users className="h-4 w-4 shrink-0 text-blue-400" />
-                      {inlineAssigneeId ? (
-                        <span className="text-[13px] text-white font-medium truncate">{getMemberName(selectedAssignee!)}</span>
-                      ) : (
-                        <span className="text-[13px] text-zinc-400">Select Assignee</span>
-                      )}
+                {showAssigneePicker && (
+                  <div className="absolute left-0 bottom-full mb-1.5 z-40 w-52 rounded-xl border border-white/[0.1] bg-[#1a1a1a] shadow-2xl shadow-black/60 overflow-hidden picker-container">
+                    <div className="p-1.5 max-h-[180px] overflow-y-auto flex flex-col gap-0.5 [&::-webkit-scrollbar]:w-1 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-zinc-700 [&::-webkit-scrollbar-thumb]:rounded-full">
+                      {members.length === 0 ? (
+                        <div className="px-3 py-2 text-[12px] text-zinc-500">No members</div>
+                      ) : members.map((m) => (
+                        <button
+                          key={m.userId}
+                          onClick={() => { setInlineAssigneeId(m.userId); setShowAssigneePicker(false) }}
+                          className={cn(
+                            "w-full flex items-center gap-2.5 px-2.5 py-1 rounded-lg text-[13px] transition-colors cursor-pointer",
+                            m.userId === inlineAssigneeId
+                              ? "bg-blue-500/10 text-blue-300"
+                              : "text-zinc-300 hover:bg-white/[0.06] hover:text-white"
+                          )}
+                        >
+                          <Avatar className="h-6 w-6 shrink-0">
+                            {m.user?.avatarUrl && <AvatarImage src={m.user.avatarUrl} alt={getMemberName(m)} />}
+                            <AvatarFallback className="text-[9px] bg-zinc-800 text-zinc-400">
+                              {(m.user?.firstName?.charAt(0) || m.user?.login?.charAt(0) || '?').toUpperCase()}
+                            </AvatarFallback>
+                          </Avatar>
+                          <span className="truncate">{getMemberName(m)}</span>
+                        </button>
+                      ))}
                     </div>
-                    {inlineAssigneeId && (
-                      <button
-                        onClick={(e) => { e.stopPropagation(); setInlineAssigneeId(null); setShowAssigneePicker(false) }}
-                        className="shrink-0 ml-2 p-1 rounded-md text-zinc-500 hover:text-red-400 hover:bg-red-500/10 transition-colors"
-                      >
-                        <X className="h-3.5 w-3.5" />
-                      </button>
-                    )}
                   </div>
-                  <div className="p-1 max-h-[200px] overflow-y-auto">
-                    {!inlineAssigneeId && members.length === 0 && (
-                      <div className="px-2.5 py-2 text-[12px] text-zinc-500">No members available</div>
-                    )}
-                    {members.filter(m => m.userId !== inlineAssigneeId).map((m) => (
-                      <button
-                        key={m.userId}
-                        onClick={() => { setInlineAssigneeId(m.userId); setShowAssigneePicker(false) }}
-                        className="w-full flex items-center px-2 py-1.5 rounded-md text-[13px] text-zinc-300 hover:bg-white/[0.06] hover:text-white transition-colors cursor-pointer"
-                      >
-                        <span className="truncate ml-6">{getMemberName(m)}</span>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
+                )}
+              </div>
 
-            <div className="h-px bg-white/[0.06]" />
-
-            {/* Priority */}
-            <div className="relative h-[36px]">
-              {!showPriorityPicker ? (
+              {/* Priority chip */}
+              <div className="relative picker-trigger">
                 <button
-                  onClick={() => { setShowPriorityPicker(true); setShowAssigneePicker(false) }}
-                  className="absolute inset-0 flex items-center gap-2.5 text-[13px] text-zinc-400 hover:text-zinc-200 transition-colors cursor-pointer picker-trigger"
+                  onClick={() => { setShowPriorityPicker(!showPriorityPicker); setShowAssigneePicker(false) }}
+                  className={cn(
+                    "flex items-center gap-1.5 h-7 px-2.5 rounded-full text-[12px] font-medium border transition-all cursor-pointer picker-trigger",
+                    inlinePriority === 'HIGH' ? "bg-red-500/10 border-red-500/20 text-red-400" :
+                    inlinePriority === 'MEDIUM' ? "bg-amber-500/10 border-amber-500/20 text-amber-400" :
+                    inlinePriority === 'LOW' ? "bg-zinc-500/10 border-zinc-500/20 text-zinc-400" :
+                    "bg-white/[0.04] border-white/[0.08] text-zinc-500 hover:text-zinc-300 hover:bg-white/[0.06]"
+                  )}
                 >
-                  <CircleDot className="h-4 w-4 shrink-0" />
-                  <span className="flex items-center gap-1.5">
-                    {inlinePriority ? (
-                      <>
-                        <span className={cn("h-2 w-2 rounded-full", priorityOptions.find((p) => p.value === inlinePriority)?.color)} />
-                        {priorityOptions.find((p) => p.value === inlinePriority)?.label}
-                      </>
-                    ) : "Add Priority"}
-                  </span>
-                </button>
-              ) : (
-                <div className="absolute -inset-x-2.5 -top-2 z-30 rounded-xl border border-white/[0.08] bg-[#1e1e1e] shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-150 picker-container">
-                  <div className="flex items-center justify-between px-2.5 py-2 border-b border-white/[0.06] bg-white/[0.02]">
-                    <div className="flex items-center gap-2 min-w-0">
-                      <CircleDot className="h-4 w-4 shrink-0 text-amber-400" />
-                      {inlinePriority ? (
-                        <div className="flex items-center gap-1.5">
-                          <span className={cn("h-2 w-2 rounded-full", priorityOptions.find((p) => p.value === inlinePriority)?.color)} />
-                          <span className="text-[13px] text-white font-medium truncate">{priorityOptions.find(p => p.value === inlinePriority)?.label}</span>
-                        </div>
-                      ) : (
-                        <span className="text-[13px] text-zinc-400">Select Priority</span>
-                      )}
-                    </div>
-                    {inlinePriority && (
+                  {inlinePriority ? (
+                    <>
+                      <span className={cn("h-1.5 w-1.5 rounded-full shrink-0", priorityOptions.find(p => p.value === inlinePriority)?.color)} />
+                      {priorityOptions.find(p => p.value === inlinePriority)?.label}
                       <button
-                        onClick={(e) => { e.stopPropagation(); setInlinePriority(null); setShowPriorityPicker(false) }}
-                        className="shrink-0 ml-2 p-1 rounded-md text-zinc-500 hover:text-red-400 hover:bg-red-500/10 transition-colors"
+                        onClick={(e) => { e.stopPropagation(); setInlinePriority(null) }}
+                        className="ml-0.5 opacity-60 hover:opacity-100 transition-opacity"
                       >
-                        <X className="h-3.5 w-3.5" />
+                        <X className="h-3 w-3" />
                       </button>
-                    )}
-                  </div>
-                  <div className="p-1">
-                    {priorityOptions.filter(p => p.value !== inlinePriority).map((p) => (
-                      <button
-                        key={p.value}
-                        onClick={() => { setInlinePriority(p.value); setShowPriorityPicker(false) }}
-                        className="w-full flex items-center px-2 py-1.5 rounded-md text-[13px] text-zinc-300 hover:bg-white/[0.06] hover:text-white transition-colors cursor-pointer"
-                      >
-                        <div className="flex items-center gap-2 ml-6">
-                          <span className={cn("h-2 w-2 rounded-full", p.color)} />
+                    </>
+                  ) : (
+                    <>
+                      <CircleDot className="h-3.5 w-3.5" />
+                      Priority
+                    </>
+                  )}
+                </button>
+                {showPriorityPicker && (
+                  <div className="absolute left-0 bottom-full mb-1.5 z-40 w-40 rounded-xl border border-white/[0.1] bg-[#1a1a1a] shadow-2xl shadow-black/60 overflow-hidden picker-container">
+                    <div className="p-1.5 flex flex-col gap-0.5">
+                      {priorityOptions.map((p) => (
+                        <button
+                          key={p.value}
+                          onClick={() => { setInlinePriority(p.value); setShowPriorityPicker(false) }}
+                          className={cn(
+                            "w-full flex items-center gap-2.5 px-2.5 py-1 rounded-lg text-[13px] transition-colors cursor-pointer",
+                            p.value === inlinePriority
+                              ? "bg-white/[0.08] text-white"
+                              : "text-zinc-300 hover:bg-white/[0.06] hover:text-white"
+                          )}
+                        >
+                          <span className={cn("h-2 w-2 rounded-full shrink-0", p.color)} />
                           {p.label}
-                        </div>
-                      </button>
-                    ))}
+                        </button>
+                      ))}
+                    </div>
                   </div>
-                </div>
-              )}
+                )}
+              </div>
             </div>
           </div>
         )}
@@ -799,6 +824,45 @@ export function KanbanColumn({
         anchorRect={anchorRect}
         members={members}
       />
+
+      {contextMenuTask && (
+        <div 
+          className="fixed z-50 w-44 bg-[#1e1e1e] border border-white/[0.07] p-1.5 rounded-xl shadow-2xl"
+          style={{ 
+            top: contextMenuTask.y, 
+            left: contextMenuTask.x,
+            transform: `translate(${contextMenuTask.x + 180 > window.innerWidth ? '-100%' : '0px'}, ${contextMenuTask.y + 160 > window.innerHeight ? '-100%' : '0px'})`
+          }}
+          onMouseDown={(e) => e.stopPropagation()}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <button 
+            onClick={() => { onOpenPanel(contextMenuTask.task); setContextMenuTask(null) }} 
+            className="w-full flex items-center gap-2.5 px-2.5 py-1.5 rounded-lg text-[13px] text-zinc-300 hover:bg-white/[0.06] hover:text-white cursor-pointer transition-colors"
+          >
+            <ExternalLink className="h-3.5 w-3.5" />
+            <span>Open Task</span>
+          </button>
+          <button 
+            onClick={() => { handleInlineEditTask(contextMenuTask.task); setContextMenuTask(null) }} 
+            className="w-full flex items-center gap-2.5 px-2.5 py-1.5 rounded-lg text-[13px] text-zinc-300 hover:bg-white/[0.06] hover:text-white cursor-pointer transition-colors"
+          >
+            <Pencil className="h-3.5 w-3.5" />
+            <span>Quick Edit</span>
+          </button>
+          <div className="h-px bg-white/[0.06] my-1" />
+          <button 
+            onClick={() => {
+              deleteTask.mutate(contextMenuTask.task.id)
+              setContextMenuTask(null)
+            }} 
+            className="w-full flex items-center gap-2.5 px-2.5 py-1.5 rounded-lg text-[13px] text-red-400 hover:bg-red-500/10 hover:text-red-400 cursor-pointer transition-colors"
+          >
+            <Trash2 className="h-3.5 w-3.5" />
+            <span>Delete Task</span>
+          </button>
+        </div>
+      )}
     </Reorder.Item>
   )
 }

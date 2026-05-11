@@ -23,6 +23,7 @@ export default function BoardPage() {
   const [priorityFilter, setPriorityFilter] = useState<string | null>(null)
   const [sortBy, setSortBy] = useState<string | null>(null)
   const [boardContentWidth, setBoardContentWidth] = useState<number | null>(null)
+  const [viewMode, setViewMode] = useState<"kanban" | "list">("kanban")
 
   // Handle GitHub App redirect statuses
   useEffect(() => {
@@ -83,6 +84,8 @@ export default function BoardPage() {
           sortBy={sortBy}
           onSortChange={setSortBy}
           contentWidth={boardContentWidth}
+          viewMode={viewMode}
+          onViewModeChange={(view) => setViewMode(view as "kanban" | "list")}
         />
         <main className="flex-1 overflow-hidden">
           {isLoading ? (
@@ -103,6 +106,7 @@ export default function BoardPage() {
               sortBy={sortBy}
               currentUserId={user?.id}
               onWidthChange={setBoardContentWidth}
+              viewMode={viewMode}
             />
           )}
         </main>

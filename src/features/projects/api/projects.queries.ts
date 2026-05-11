@@ -4,7 +4,6 @@ import type {
     CreateProjectDto,
     UpdateProjectDto,
     AddMemberDto,
-    CreateTaskInProjectDto,
 } from '../types/projects.types'
 
 // ─── Query Keys ───
@@ -56,6 +55,19 @@ export function useUpdateProject() {
     })
 }
 
+export function useUploadProjectAvatar() {
+    const queryClient = useQueryClient()
+
+    return useMutation({
+        mutationFn: ({ id, file }: { id: number; file: File }) =>
+            projectsApi.uploadProjectAvatar(id, file),
+        onSuccess: (_data, variables) => {
+            queryClient.invalidateQueries({ queryKey: projectKeys.all })
+            queryClient.invalidateQueries({ queryKey: projectKeys.detail(variables.id) })
+        },
+    })
+}
+
 export function useDeleteProject() {
     const queryClient = useQueryClient()
 
@@ -91,14 +103,4 @@ export function useRemoveMember() {
     })
 }
 
-export function useCreateTask() {
-    const queryClient = useQueryClient()
 
-    return useMutation({
-        mutationFn: ({ projectId, data }: { projectId: number; data: CreateTaskInProjectDto }) =>
-            projectsApi.createTask(projectId, data),
-        onSuccess: (_data, variables) => {
-            queryClient.invalidateQueries({ queryKey: projectKeys.detail(variables.projectId) })
-        },
-    })
-}

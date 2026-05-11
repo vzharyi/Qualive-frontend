@@ -49,6 +49,7 @@ export const taskSchema = z.object({
     reporterId: z.number().nullable().optional(),
     priority: z.string().nullable().optional(),
     order: z.number().optional(),
+    dueDate: z.string().nullable().optional(),
     githubCommitHash: z.string().nullable().optional(),
     linesOfCode: z.number().nullable().optional(),
     qualityScore: z.number().nullable().optional(),
@@ -86,6 +87,7 @@ export const createTaskSchema = z.object({
     priority: z.string().optional(),
     order: z.number().optional(),
     columnId: z.number(),
+    dueDate: z.string().optional(),
 })
 
 export type CreateTaskDto = z.infer<typeof createTaskSchema>
@@ -99,6 +101,7 @@ export const updateTaskSchema = z.object({
     order: z.number().optional(),
     columnId: z.number().optional(),
     githubCommitHash: z.string().optional(),
+    dueDate: z.string().nullable().optional(),
 })
 
 export type UpdateTaskDto = z.infer<typeof updateTaskSchema>

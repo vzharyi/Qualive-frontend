@@ -6,6 +6,10 @@ import { Loader2, ZoomIn, Minus, Plus } from "lucide-react"
 import type { Project } from "@/features/projects/types/projects.types"
 import type { Task, Column } from "@/features/tasks/types/tasks.types"
 import { useTasks, useColumns, useUpdateTask, useUpdateColumn } from "@/features/tasks/api/tasks.queries"
+import { cn } from "@/lib/utils"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { CalendarDays } from "lucide-react"
+import { useTaskGithubItems } from "@/features/tasks/api/github-items.queries"
 
 interface KanbanBoardProps {
   project: Project
@@ -15,6 +19,7 @@ interface KanbanBoardProps {
   sortBy?: string | null
   currentUserId?: number
   onWidthChange?: (width: number) => void
+  viewMode?: "kanban" | "list"
 }
 
 const COLUMN_WIDTH = 312 // px (approximate width of a column)
@@ -29,6 +34,7 @@ export function KanbanBoard({
   sortBy = null,
   currentUserId,
   onWidthChange,
+  viewMode = "kanban",
 }: KanbanBoardProps) {
   const { data: columns, isLoading: columnsLoading } = useColumns(project.id)
   const { data: tasks, isLoading: tasksLoading } = useTasks({ projectId: project.id })
@@ -228,25 +234,64 @@ export function KanbanBoard({
             zoom: zoom,
           }}
         >
-          <Reorder.Group
-            axis="x"
-            values={orderedColumns}
-            onReorder={handleColumnsReorder}
-            className="flex items-start gap-4 px-6 py-4 mx-auto w-max"
-          >
-            {orderedColumns.map((column) => (
-              <KanbanColumn
-                key={column.id}
-                column={column}
-                tasks={tasksByColumn[column.id] || []}
-                onOpenPanel={handleEditTask}
-                onDropTask={(taskId, beforeId) => handleTaskDrop(taskId, column.id, beforeId)}
-                projectId={project.id}
-                members={project.members}
-                isZooming={isZooming}
-              />
-            ))}
-          </Reorder.Group>
+          {viewMode === "kanban" ? (
+            <Reorder.Group
+              axis="x"
+              values={orderedColumns}
+              onReorder={handleColumnsReorder}
+              className="flex items-start gap-4 px-6 py-4 mx-auto w-max"
+            >
+              {orderedColumns.map((column) => (
+                <KanbanColumn
+                  key={column.id}
+                  column={column}
+                  tasks={tasksByColumn[column.id] || []}
+                  onOpenPanel={handleEditTask}
+                  onDropTask={(taskId, beforeId) => handleTaskDrop(taskId, column.id, beforeId)}
+                  projectId={project.id}
+                  members={project.members}
+                  isZooming={isZooming}
+                />
+              ))}
+            </Reorder.Group>
+          ) : (
+            <div className="px-12 py-6 max-w-5xl mx-auto">
+              {orderedColumns.map((column) => {
+                const columnTasks = tasksByColumn[column.id] || []
+                return (
+                  <div key={column.id} className="mb-8">
+                    <div className="flex items-center gap-2 mb-3">
+                      <div
+                        className="w-2 h-2 rounded-full"
+                        style={{ backgroundColor: column.color || "#94a3b8" }}
+                      />
+                      <h3 className="text-[14px] font-medium text-white">
+                        {column.name}
+                      </h3>
+                      <span className="text-[12px] text-zinc-600">
+                        {columnTasks.length}
+                      </span>
+                    </div>
+                    
+                    <div className="space-y-2">
+                      {columnTasks.map((task) => (
+                        <TaskRow
+                          key={task.id}
+                          task={task}
+                          onOpenPanel={handleEditTask}
+                        />
+                      ))}
+                      {columnTasks.length === 0 && (
+                        <div className="text-[12px] text-zinc-600 py-2 pl-4">
+                          No tasks in this column
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          )}
         </div>
       </div>
 
@@ -329,6 +374,128 @@ export function KanbanBoard({
         members={project.members}
         columns={orderedColumns}
       />
+    </div>
+  )
+}
+
+// TaskRow component for List View
+function TaskRow({ task, onOpenPanel }: { task: Task, onOpenPanel: (task: Task) => void }) {
+  const { data: githubItems } = useTaskGithubItems(task.id)
+  
+  const displayScore = (() => {
+    if (task.qualityScore !== null && task.qualityScore !== undefined) return task.qualityScore
+    if (task.codeScore !== null && task.codeScore !== undefined) return task.codeScore
+    if (githubItems && githubItems.length > 0) {
+      const itemsWithScore = githubItems.filter(item => item.codeScore !== null)
+      if (itemsWithScore.length === 0) return null
+      const total = itemsWithScore.reduce((sum, item) => sum + (item.codeScore || 0), 0)
+      return Math.round(total / itemsWithScore.length)
+    }
+    return null
+  })()
+
+  const assigneeName = task.assignee
+    ? task.assignee.firstName && task.assignee.lastName
+      ? `${task.assignee.firstName} ${task.assignee.lastName}`
+      : task.assignee.login
+    : null
+
+  const assigneeInitial = task.assignee
+    ? task.assignee.firstName?.charAt(0) || task.assignee.login.charAt(0)
+    : null
+
+  const getDueDateInfo = (dueDateStr: string) => {
+    const due = new Date(dueDateStr)
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+    due.setHours(0, 0, 0, 0)
+    const diffTime = due.getTime() - today.getTime()
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
+    
+    let style = "bg-transparent text-zinc-400 border border-white/10"
+    let iconStyle = "text-zinc-500"
+    
+    if (diffDays < 0) {
+      style = "bg-transparent text-red-500 border border-red-500/30"
+      iconStyle = "text-red-500"
+    } else if (diffDays === 0) {
+      style = "bg-transparent text-red-500 border border-red-500/30"
+      iconStyle = "text-red-500"
+    } else if (diffDays <= 3) {
+      style = "bg-transparent text-amber-500 border border-amber-500/30"
+      iconStyle = "text-amber-500"
+    }
+    
+    return {
+      style,
+      iconStyle,
+      label: due.toLocaleDateString('en-US', { day: 'numeric', month: 'short' })
+    }
+  }
+
+  const getScoreStyle = (score: number) => {
+    if (score >= 80) return "bg-emerald-500/10 text-emerald-500 ring-emerald-500/20"
+    if (score >= 50) return "bg-amber-500/10 text-amber-500 ring-amber-500/20"
+    return "bg-red-500/10 text-red-500 ring-red-500/20"
+  }
+
+  return (
+    <div
+      onClick={() => onOpenPanel(task)}
+      className="flex items-center justify-between bg-white/[0.02] border border-white/[0.04] rounded-lg p-3 hover:bg-white/[0.04] transition-all cursor-pointer"
+    >
+      <div className="flex items-center gap-3">
+        <span className="text-[12px] font-mono text-zinc-600">
+          #{task.id}
+        </span>
+        <span className="text-[14px] text-white">
+          {task.title}
+        </span>
+      </div>
+      <div className="flex items-center gap-3">
+        {task.dueDate && (() => {
+          const { style, iconStyle, label } = getDueDateInfo(task.dueDate)
+          return (
+            <div className={cn("flex h-5 items-center rounded border px-1.5 text-[10px] font-medium gap-1.5", style)}>
+              <CalendarDays className={cn("h-3 w-3", iconStyle)} />
+              {label}
+            </div>
+          )
+        })()}
+
+        {task.priority && (
+          <span className={cn(
+            "text-[11px] px-1.5 py-0.5 rounded-md font-bold uppercase",
+            task.priority === "HIGH" && "bg-red-500/10 text-red-500",
+            task.priority === "MEDIUM" && "bg-amber-500/10 text-amber-500",
+            task.priority === "LOW" && "bg-zinc-500/10 text-zinc-400"
+          )}>
+            {task.priority}
+          </span>
+        )}
+
+        {assigneeName && (
+          <div className="flex items-center gap-2">
+            <Avatar className="h-5 w-5 ring-1 ring-white/[0.06]">
+              {task.assignee?.avatarUrl && <AvatarImage src={task.assignee.avatarUrl} alt={assigneeName} />}
+              <AvatarFallback className="text-[9px] bg-zinc-800 text-zinc-500">{assigneeInitial}</AvatarFallback>
+            </Avatar>
+            <span className="text-[11px] text-zinc-500 hidden md:inline">{assigneeName}</span>
+          </div>
+        )}
+
+        {displayScore !== null && (
+          <div 
+            className={cn(
+              "flex shrink-0 h-6 w-6 items-center justify-center rounded-full ring-1 text-[9px] font-bold shadow-sm", 
+              getScoreStyle(displayScore)
+            )}
+            title="Task Health Score"
+          >
+            {displayScore}
+          </div>
+        )}
+      </div>
     </div>
   )
 }

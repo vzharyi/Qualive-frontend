@@ -83,7 +83,7 @@ function DefectsList({ reportId }: { reportId: number }) {
     }
 
     return (
-        <div className="mt-2 space-y-1.5 pl-12 pr-4 pb-3">
+        <div className="mt-2 space-y-1.5 pl-12 pr-4 pb-3 max-h-[340px] overflow-y-auto [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-zinc-700/50 [&::-webkit-scrollbar-thumb]:rounded-full hover:[&::-webkit-scrollbar-thumb]:bg-zinc-600">
             {defects.map((d) => (
                 <DefectRow key={d.id} defect={d} />
             ))}
@@ -425,7 +425,7 @@ export function TaskGithubSection({ taskId, projectId }: TaskGithubSectionProps)
                     </div>
                 </div>
             ) : (
-                <div className="space-y-2">
+                <div className="space-y-2 h-[422px] ">
                     {items.map((item) => (
                         <LinkedItemRow
                             key={item.id}

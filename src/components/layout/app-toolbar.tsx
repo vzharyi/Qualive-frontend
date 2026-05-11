@@ -27,6 +27,8 @@ import { useProject } from "@/features/projects/api/projects.queries"
 import { useAuth } from "@/features/auth/store/auth.store"
 import type { ProjectMember } from "@/features/projects/types/projects.types"
 
+type ViewType = "kanban" | "list" | "calendar"
+
 interface AppToolbarProps {
   members?: ProjectMember[]
   searchQuery: string
@@ -38,9 +40,9 @@ interface AppToolbarProps {
   sortBy: string | null
   onSortChange: (sort: string | null) => void
   contentWidth?: number | null
+  viewMode: ViewType
+  onViewModeChange: (view: ViewType) => void
 }
-
-type ViewType = "kanban" | "list" | "calendar"
 
 const views: { id: ViewType; label: string; icon: any }[] = [
   { id: "kanban", label: "Board", icon: AlignLeft },
@@ -58,8 +60,9 @@ export function AppToolbar({
   sortBy,
   onSortChange,
   contentWidth,
+  viewMode,
+  onViewModeChange,
 }: AppToolbarProps) {
-  const [activeView, setActiveView] = useState<ViewType>("kanban")
   const [repoPanelOpen, setRepoPanelOpen] = useState(false)
   const [isSearchHovered, setIsSearchHovered] = useState(false)
   const [isSearchFocused, setIsSearchFocused] = useState(false)
@@ -98,10 +101,10 @@ export function AppToolbar({
           {views.map((view) => (
             <button
               key={view.id}
-              onClick={() => setActiveView(view.id)}
+              onClick={() => onViewModeChange(view.id)}
               className={cn(
                 "flex items-center gap-1.5 h-7 px-2.5 rounded-md text-[13px] transition-all cursor-pointer",
-                activeView === view.id
+                viewMode === view.id
                   ? "bg-white/[0.08] text-white shadow-sm"
                   : "text-zinc-500 hover:text-zinc-300 hover:bg-white/[0.03]",
               )}
@@ -124,6 +127,7 @@ export function AppToolbar({
               )}
               onMouseEnter={() => setIsSearchHovered(true)}
               onMouseLeave={() => setIsSearchHovered(false)}
+              initial={false}
               animate={{ width: (isSearchHovered || isSearchFocused || searchQuery) ? 160 : 32 }}
               transition={{ type: "spring", stiffness: 300, damping: 30 }}
             >
@@ -215,7 +219,7 @@ export function AppToolbar({
                           onSortChange(null);
                         }}
                         onSelect={(e) => e.preventDefault()}
-                        className="flex items-center justify-between px-3 py-2 rounded-lg transition-all cursor-pointer group bg-red-500/[0.08] text-red-400 border border-red-500/20 hover:bg-red-500/15"
+                        className="flex items-center justify-between px-3 py-2 rounded-lg transition-all cursor-pointer group bg-red-500/[0.08] text-red-400 border border-red-500/20 hover:bg-red-500/15 focus:bg-red-500/15 focus:text-red-400"
                       >
                         <div className="flex items-center gap-3">
                           <X className="h-3.5 w-3.5" />

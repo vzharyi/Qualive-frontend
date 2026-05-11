@@ -33,6 +33,17 @@ export const projectsApi = {
         await api.delete(`/projects/${id}`)
     },
 
+    uploadProjectAvatar: async (id: number, file: File): Promise<Project> => {
+        const formData = new FormData()
+        formData.append('file', file)
+        const response = await api.post<Project>(`/projects/${id}/avatar`, formData, {
+            headers: {
+                'Content-Type': 'multipart/form-data',
+            },
+        })
+        return response.data
+    },
+
     // ─── Members ───
     addMember: async (projectId: number, data: AddMemberDto): Promise<ProjectMember> => {
         const response = await api.post<ProjectMember>(`/projects/${projectId}/members`, data)

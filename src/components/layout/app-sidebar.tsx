@@ -11,6 +11,7 @@ import {
   LayoutDashboard,
   Loader2,
   Settings,
+  Settings2,
   HelpCircle,
   Hash,
   ChevronRight,
@@ -18,6 +19,9 @@ import {
   CheckCircle2,
 } from "lucide-react"
 import { useProjects } from "@/features/projects/api/projects.queries"
+import { ProjectSettingsModal } from "@/features/projects/components/project-settings-modal"
+import type { Project } from "@/features/projects/types/projects.types"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 
 interface AppSidebarProps {
   isOpen: boolean
@@ -25,16 +29,27 @@ interface AppSidebarProps {
 }
 
 // Technical palette for project indicators (OKLCH based)
-const PROJECT_THEMES = [
-  "text-emerald-400 bg-emerald-400/10 border-emerald-400/20",
-  "text-blue-400 bg-blue-400/10 border-blue-400/20",
-  "text-violet-400 bg-violet-400/10 border-violet-400/20",
-  "text-amber-400 bg-amber-400/10 border-amber-400/20",
-  "text-rose-400 bg-rose-400/10 border-rose-400/20",
+const PROJECT_COLORS = [
+    { bg: 'bg-blue-500/10', text: 'text-blue-400', border: 'border-blue-500/20' },
+    { bg: 'bg-violet-500/10', text: 'text-violet-400', border: 'border-violet-500/20' },
+    { bg: 'bg-amber-500/10', text: 'text-amber-400', border: 'border-amber-500/20' },
+    { bg: 'bg-rose-500/10', text: 'text-rose-400', border: 'border-rose-500/20' },
+    { bg: 'bg-cyan-500/10', text: 'text-cyan-400', border: 'border-cyan-500/20' },
+    { bg: 'bg-fuchsia-500/10', text: 'text-fuchsia-400', border: 'border-fuchsia-500/20' },
 ]
 
+const getProjectColor = (id: string | number) => {
+    const str = String(id);
+    let hash = 0;
+    for (let i = 0; i < str.length; i++) {
+        hash = str.charCodeAt(i) + ((hash << 5) - hash);
+    }
+    return PROJECT_COLORS[Math.abs(hash) % PROJECT_COLORS.length];
+}
+
 function getProjectTheme(id: number) {
-  return PROJECT_THEMES[id % PROJECT_THEMES.length]
+  const color = getProjectColor(id);
+  return `${color.text} ${color.bg} ${color.border}`;
 }
 
 function NavItem({
@@ -42,14 +57,12 @@ function NavItem({
   label,
   to,
   active,
-  shortcut,
   badge,
 }: {
   icon: any
   label: string
   to?: string
   active?: boolean
-  shortcut?: string
   badge?: string | number
 }) {
   const content = (
@@ -62,18 +75,13 @@ function NavItem({
       )}
     >
       <div className="flex items-center gap-2.5 min-w-0">
-        <Icon className={cn("h-4 w-4 shrink-0 transition-colors", active ? "text-emerald-400" : "group-hover:text-zinc-300")} />
+        <Icon className={cn("h-4 w-4 shrink-0 transition-colors", active ? "text-white" : "text-zinc-500 group-hover:text-zinc-300")} />
         <span className="text-[13px] font-medium truncate tracking-tight">{label}</span>
       </div>
       <div className="flex items-center gap-2">
         {badge !== undefined && (
-          <span className="font-mono text-[9px] px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-500 border border-emerald-500/20">
+          <span className="font-mono text-[9px] px-1.5 py-0.5 rounded bg-white/[0.06] text-white border border-white/[0.1]">
             {badge}
-          </span>
-        )}
-        {shortcut && (
-          <span className="hidden group-hover:block font-mono text-[10px] text-zinc-600 uppercase tracking-tighter">
-            {shortcut}
           </span>
         )}
       </div>
@@ -127,12 +135,16 @@ function ProjectItem({
   active,
   starred,
   onStar,
+  onSettings,
+  avatarUrl,
 }: {
   id: number
   name: string
   active: boolean
   starred: boolean
   onStar: (e: React.MouseEvent) => void
+  onSettings: (e: React.MouseEvent) => void
+  avatarUrl?: string | null
 }) {
   const theme = getProjectTheme(id)
   
@@ -146,13 +158,23 @@ function ProjectItem({
           : "text-zinc-500 hover:text-zinc-300 hover:bg-white/[0.03]"
       )}
     >
-      <div className={cn("flex h-5 w-5 shrink-0 items-center justify-center rounded border text-[9px] font-bold transition-transform group-hover:scale-105", theme)}>
-        {name.charAt(0).toUpperCase()}
-      </div>
+      <Avatar className="h-5 w-5 rounded shrink-0 overflow-hidden">
+        {avatarUrl && <AvatarImage src={avatarUrl} alt={name} className="object-cover" />}
+        <AvatarFallback className={cn("h-full w-full flex items-center justify-center rounded border text-[9px] font-bold transition-transform group-hover:scale-105", theme)}>
+          {name.charAt(0).toUpperCase()}
+        </AvatarFallback>
+      </Avatar>
       
       <span className="flex-1 truncate text-[13px] font-medium tracking-tight">{name}</span>
       
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-1">
+        <button
+          onClick={onSettings}
+          className="p-1 opacity-0 group-hover:opacity-100 text-zinc-700 hover:text-zinc-400 transition-all cursor-pointer"
+          title="Project settings"
+        >
+          <Settings2 className="h-3.5 w-3.5" />
+        </button>
         <button
           onClick={onStar}
           className={cn(
@@ -160,7 +182,7 @@ function ProjectItem({
             starred ? "text-amber-400" : "opacity-0 group-hover:opacity-100 text-zinc-700 hover:text-zinc-500"
           )}
         >
-          <Star className={cn("h-3 w-3", starred && "fill-amber-400")} />
+          <Star className={cn("h-3.5 w-3.5", starred && "fill-amber-400")} />
         </button>
       </div>
     </Link>
@@ -171,6 +193,7 @@ function SidebarContent({ inHoverPanel = false, onToggle }: { inHoverPanel?: boo
   const { data: projects, isLoading } = useProjects()
   const { id: activeProjectId } = useParams()
   const [searchQuery, setSearchQuery] = useState("")
+  const [settingsProject, setSettingsProject] = useState<Project | null>(null)
   
   const [openSections, setOpenSections] = useState<Record<string, boolean>>({
     recents: true,
@@ -213,36 +236,18 @@ function SidebarContent({ inHoverPanel = false, onToggle }: { inHoverPanel?: boo
     [allProjects, starred]
   )
   
-  const recents = useMemo(() => {
-    try {
-      const raw = localStorage.getItem("qualive_recent_projects")
-      const ids: number[] = raw ? JSON.parse(raw) : []
-      const activeId = activeProjectId ? Number(activeProjectId) : null
-      
-      let list = ids.flatMap(id => projects?.filter(p => p.id === id) ?? [])
-      if (activeId && !list.find(p => p.id === activeId)) {
-        const activeP = projects?.find(p => p.id === activeId)
-        if (activeP) list = [activeP, ...list]
-      }
-      
-      // If searching, filter recents too
-      if (searchQuery) {
-        const query = searchQuery.toLowerCase()
-        list = list.filter(p => p.name.toLowerCase().includes(query))
-      }
-      
-      return list.slice(0, 3)
-    } catch { return [] }
-  }, [projects, activeProjectId, searchQuery])
+  const displayAllProjects = useMemo(() => {
+    return allProjects.filter(p => !starred.has(p.id))
+  }, [allProjects, starred])
 
   return (
     <div className="flex flex-col h-full bg-[#131313]">
       {/* App Branding: Technical & Precise */}
       <div className="h-14 flex items-center justify-between px-4 border-b border-white/[0.04]">
         <Link to="/dashboard" className="flex items-center gap-3 group">
-          <div className="h-8 w-8 rounded-lg border border-white/[0.08] flex items-center justify-center transition-all group-hover:border-emerald-500/50 group-hover:shadow-[0_0_20px_rgba(16,185,129,0.1)] relative overflow-hidden">
-            <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-            <Hash className="h-4 w-4 text-emerald-500 stroke-[2.5px] relative z-10" />
+          <div className="h-8 w-8 rounded-lg border border-white/[0.08] flex items-center justify-center transition-all group-hover:border-zinc-500/50 group-hover:shadow-[0_0_20px_rgba(255,255,255,0.02)] relative overflow-hidden">
+            <div className="absolute inset-0 bg-gradient-to-br from-white/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+            <Hash className="h-4 w-4 text-zinc-400 stroke-[2.5px] relative z-10 transition-colors group-hover:text-white" />
           </div>
           <div className="flex flex-col">
             <span className="text-[14px] font-black text-white tracking-tight leading-none uppercase">QUALIVE</span>
@@ -262,7 +267,7 @@ function SidebarContent({ inHoverPanel = false, onToggle }: { inHoverPanel?: boo
       {/* Primary Actions: Navigation & Search */}
       <div className="px-3 pt-5 space-y-1">
         <div className="relative group/search mb-4">
-          <div className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-600 group-focus-within/search:text-emerald-500 transition-colors">
+          <div className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-600 group-focus-within/search:text-white transition-colors">
             <Search className="h-3.5 w-3.5" />
           </div>
           <input 
@@ -270,7 +275,7 @@ function SidebarContent({ inHoverPanel = false, onToggle }: { inHoverPanel?: boo
             placeholder="Search projects..." 
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full bg-white/[0.03] border border-white/[0.05] rounded-lg py-1.5 pl-9 pr-3 text-[12px] text-zinc-300 placeholder:text-zinc-700 focus:outline-none focus:border-emerald-500/30 focus:bg-white/[0.05] transition-all"
+            className="w-full bg-white/[0.02] border border-white/[0.04] rounded-lg py-1.5 pl-9 pr-3 text-[12px] text-zinc-300 placeholder:text-zinc-700 focus:outline-none focus:border-white/[0.15] focus:bg-white/[0.04] transition-all"
           />
           {searchQuery ? (
             <button 
@@ -286,9 +291,9 @@ function SidebarContent({ inHoverPanel = false, onToggle }: { inHoverPanel?: boo
           )}
         </div>
         
-        <NavItem icon={LayoutDashboard} label="Dashboard" to="/dashboard" active={!activeProjectId} shortcut="D" />
-        <NavItem icon={Inbox} label="Notifications" badge="3" shortcut="I" />
-        <NavItem icon={CheckCircle2} label="My Workbench" shortcut="W" />
+        <NavItem icon={LayoutDashboard} label="Dashboard" to="/dashboard" active={!activeProjectId} />
+        <NavItem icon={Inbox} label="Notifications" badge="3" />
+        <NavItem icon={CheckCircle2} label="My Workbench" />
       </div>
 
       {/* Categorized Content */}
@@ -320,6 +325,7 @@ function SidebarContent({ inHoverPanel = false, onToggle }: { inHoverPanel?: boo
                         active={Number(activeProjectId) === p.id} 
                         starred={true}
                         onStar={(e) => toggleStar(e, p.id)}
+                        onSettings={(e) => { e.preventDefault(); e.stopPropagation(); setSettingsProject(p) }}
                       />
                     ))}
                   </motion.div>
@@ -328,44 +334,13 @@ function SidebarContent({ inHoverPanel = false, onToggle }: { inHoverPanel?: boo
             </div>
           )}
 
-          {/* Recents: Dynamic History */}
-          {recents.length > 0 && (
-            <div className="space-y-1">
-              <SectionHeader 
-                label="Recents" 
-                count={recents.length}
-                open={openSections.recents} 
-                onToggle={() => toggleSection("recents")} 
-              />
-              <AnimatePresence initial={false}>
-                {openSections.recents && (
-                  <motion.div
-                    initial={{ height: 0, opacity: 0 }}
-                    animate={{ height: "auto", opacity: 1 }}
-                    exit={{ height: 0, opacity: 0 }}
-                    transition={{ type: "spring", bounce: 0, duration: 0.3 }}
-                    className="overflow-hidden space-y-0.5"
-                  >
-                    {recents.map(p => (
-                      <ProjectItem 
-                        key={p.id} 
-                        {...p} 
-                        active={Number(activeProjectId) === p.id} 
-                        starred={starred.has(p.id)}
-                        onStar={(e) => toggleStar(e, p.id)}
-                      />
-                    ))}
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </div>
-          )}
+
 
           {/* All Projects: Master List */}
           <div className="space-y-1">
             <SectionHeader 
               label="Projects" 
-              count={allProjects.length}
+              count={displayAllProjects.length}
               open={openSections.projects} 
               onToggle={() => toggleSection("projects")}
               onAdd={() => {}}
@@ -384,7 +359,7 @@ function SidebarContent({ inHoverPanel = false, onToggle }: { inHoverPanel?: boo
                       <Loader2 className="h-4 w-4 animate-spin text-zinc-800" />
                       <span className="text-[10px] font-mono text-zinc-800 uppercase tracking-widest">Syncing</span>
                     </div>
-                  ) : allProjects.length === 0 ? (
+                  ) : displayAllProjects.length === 0 ? (
                     <div className="px-4 py-8 text-center border border-dashed border-white/[0.03] rounded-lg mx-2">
                       <p className="text-[11px] text-zinc-600 font-medium">Empty Workspace</p>
                       <button className="mt-3 text-[10px] text-emerald-500/70 hover:text-emerald-400 font-bold uppercase tracking-wider transition-colors">
@@ -392,13 +367,14 @@ function SidebarContent({ inHoverPanel = false, onToggle }: { inHoverPanel?: boo
                       </button>
                     </div>
                   ) : (
-                    allProjects.map(p => (
+                    displayAllProjects.map(p => (
                       <ProjectItem 
                         key={p.id} 
                         {...p} 
                         active={Number(activeProjectId) === p.id} 
                         starred={starred.has(p.id)}
                         onStar={(e) => toggleStar(e, p.id)}
+                        onSettings={(e) => { e.preventDefault(); e.stopPropagation(); setSettingsProject(p) }}
                       />
                     ))
                   )}
@@ -411,10 +387,18 @@ function SidebarContent({ inHoverPanel = false, onToggle }: { inHoverPanel?: boo
 
       <div className="mt-auto p-3 border-t border-white/[0.04]">
         <div className="space-y-0.5">
-          <NavItem icon={Settings} label="System Settings" shortcut="," />
+          <NavItem icon={Settings} label="System Settings" />
           <NavItem icon={HelpCircle} label="Docs & Support" />
         </div>
       </div>
+
+      {settingsProject && (
+        <ProjectSettingsModal
+          open={true}
+          onClose={() => setSettingsProject(null)}
+          project={settingsProject}
+        />
+      )}
     </div>
   )
 }
@@ -432,7 +416,7 @@ export function AppSidebar({ isOpen, onToggle }: AppSidebarProps) {
 
       {!isOpen && (
         <div
-          className="fixed left-0 top-0 z-50 h-full w-2 transition-colors hover:bg-emerald-500/5 cursor-pointer"
+          className="fixed left-0 top-0 z-50 h-full w-2 transition-colors hover:bg-white/[0.03] cursor-pointer"
           onMouseEnter={() => setShowHoverPanel(true)}
         />
       )}

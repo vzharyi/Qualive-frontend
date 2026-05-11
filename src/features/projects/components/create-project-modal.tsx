@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useState, useRef } from "react"
 import {
   Dialog,
   DialogContent,
@@ -15,15 +15,13 @@ import {
   Users,
   CalendarRange,
   UserCircle2,
-  Paperclip,
-  BarChart2,
-  Wallet2,
-  Sparkles,
   Plus,
   X,
   Kanban,
+  Camera,
 } from "lucide-react"
-import { useCreateProject } from "@/features/projects/api/projects.queries"
+import { useCreateProject, useUploadProjectAvatar } from "@/features/projects/api/projects.queries"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { cn } from "@/lib/utils"
 
 import { COLUMN_COLORS } from "@/features/projects/constants/colors"
@@ -38,10 +36,6 @@ type FeatureKey =
   | "team"
   | "dates"
   | "assignee"
-  | "attachments"
-  | "progress"
-  | "budget"
-  | "aiSummary"
 
 interface FeatureToggle {
   id: FeatureKey
@@ -54,10 +48,6 @@ const featureToggles: FeatureToggle[] = [
   { id: "team", label: "Team", icon: Users },
   { id: "dates", label: "Dates", icon: CalendarRange },
   { id: "assignee", label: "Assignee", icon: UserCircle2 },
-  { id: "attachments", label: "Attachments", icon: Paperclip },
-  { id: "progress", label: "Progress", icon: BarChart2 },
-  { id: "budget", label: "Budget", icon: Wallet2 },
-  { id: "aiSummary", label: "AI summary", icon: Sparkles },
 ]
 
 interface ColumnConfig {
@@ -76,6 +66,9 @@ const defaultColumns: ColumnConfig[] = [
 export function CreateProjectModal({ open, onClose }: CreateProjectModalProps) {
   const [name, setName] = useState("")
   const [description, setDescription] = useState("")
+  const [avatarFile, setAvatarFile] = useState<File | null>(null)
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
   const [enabledFeatures, setEnabledFeatures] = useState<FeatureKey[]>([
     "priority",
     "team",
@@ -85,6 +78,7 @@ export function CreateProjectModal({ open, onClose }: CreateProjectModalProps) {
   const [columns, setColumns] = useState<ColumnConfig[]>(defaultColumns)
 
   const createProject = useCreateProject()
+  const uploadProjectAvatar = useUploadProjectAvatar()
 
   const canCreate = name.trim().length > 0 && columns.length > 0
 
@@ -143,8 +137,23 @@ export function CreateProjectModal({ open, onClose }: CreateProjectModalProps) {
         columns: columns.map((c) => ({ name: c.title, color: c.color })),
       },
       {
-        onSuccess: () => {
-          handleClose()
+        onSuccess: (data: any) => {
+          if (avatarFile && data?.id) {
+            uploadProjectAvatar.mutate(
+              { id: data.id, file: avatarFile },
+              {
+                onSuccess: () => {
+                  handleClose()
+                },
+                onError: () => {
+                  alert("Project created, but avatar upload failed.")
+                  handleClose()
+                }
+              }
+            )
+          } else {
+            handleClose()
+          }
         },
       },
     )
@@ -172,14 +181,49 @@ export function CreateProjectModal({ open, onClose }: CreateProjectModalProps) {
             {/* Left Column: Basic Details */}
             <ScrollArea className="flex-3">
               <div className="space-y-6 p-6">
-                <div className="space-y-2.5">
-                  <label className="text-[13px] font-medium text-zinc-300">Project name</label>
-                  <Input
-                    autoFocus
-                    placeholder="e.g. Core API Rewrite"
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    className="h-11 bg-white/[0.02] border border-white/[0.06] text-white text-[14px] rounded-xl focus-visible:ring-1 focus-visible:ring-white/[0.15] focus-visible:border-white/[0.15] placeholder:text-zinc-600 transition-all shadow-inner"
+                <div className="flex gap-4 items-center">
+                  <div className="relative group cursor-pointer" onClick={() => fileInputRef.current?.click()}>
+                    <Avatar className="h-16 w-16 bg-white/[0.02] border border-white/[0.06] rounded-xl overflow-hidden shadow-inner flex items-center justify-center">
+                      {avatarPreview && <AvatarImage src={avatarPreview} alt="Preview" className="object-cover" />}
+                      <AvatarFallback className="text-xl font-medium text-zinc-500">
+                        {name ? name.charAt(0).toUpperCase() : <Plus className="h-5 w-5 text-zinc-600" />}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity rounded-xl flex items-center justify-center">
+                      <Camera className="h-5 w-5 text-white" />
+                    </div>
+                  </div>
+                  <div className="flex-1 space-y-2.5">
+                    <label className="text-[13px] font-medium text-zinc-300">Project name</label>
+                    <Input
+                      autoFocus
+                      placeholder="e.g. Core API Rewrite"
+                      value={name}
+                      onChange={(e) => setName(e.target.value)}
+                      className="h-11 bg-white/[0.02] border border-white/[0.06] text-white text-[14px] rounded-xl focus-visible:ring-1 focus-visible:ring-white/[0.15] focus-visible:border-white/[0.15] placeholder:text-zinc-600 transition-all shadow-inner"
+                    />
+                  </div>
+                  <input 
+                    type="file" 
+                    ref={fileInputRef} 
+                    onChange={(e) => {
+                      const file = e.target.files?.[0]
+                      if (!file) return
+                      
+                      if (file.size > 5 * 1024 * 1024) {
+                        alert("File is too large. Max size is 5MB.")
+                        return
+                      }
+                      
+                      setAvatarFile(file)
+                      const reader = new FileReader()
+                      reader.onloadend = () => {
+                        setAvatarPreview(reader.result as string)
+                      }
+                      reader.readAsDataURL(file)
+                    }} 
+                    accept="image/jpeg,image/png,image/gif,image/webp" 
+                    className="hidden" 
                   />
                 </div>
 

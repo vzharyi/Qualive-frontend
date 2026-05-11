@@ -4,7 +4,6 @@ import { motion } from 'framer-motion'
 import {
     Plus,
     FolderOpen,
-    ArrowRight,
     Loader2,
     Kanban,
     Users,
@@ -12,13 +11,16 @@ import {
     BarChart3,
     Zap,
     Shield,
+    Settings2,
 } from 'lucide-react'
 import { AppSidebar } from '@/components/layout/app-sidebar'
 import { AppHeader } from '@/components/layout/app-header'
 import { useAuth } from '@/features/auth/store/auth.store'
 import { useProjects } from '@/features/projects/api/projects.queries'
 import { CreateProjectModal } from '@/features/projects/components/create-project-modal'
+import { ProjectSettingsModal } from '@/features/projects/components/project-settings-modal'
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import type { Project } from '@/features/projects/types/projects.types'
 
 const containerVariants = {
     hidden: { opacity: 0 },
@@ -88,7 +90,6 @@ const PROJECT_COLORS = [
     { bg: 'bg-violet-500/10', text: 'text-violet-400', border: 'border-violet-500/20', hoverBorder: 'hover:border-violet-500/40' },
     { bg: 'bg-amber-500/10', text: 'text-amber-400', border: 'border-amber-500/20', hoverBorder: 'hover:border-amber-500/40' },
     { bg: 'bg-rose-500/10', text: 'text-rose-400', border: 'border-rose-500/20', hoverBorder: 'hover:border-rose-500/40' },
-    { bg: 'bg-emerald-500/10', text: 'text-emerald-400', border: 'border-emerald-500/20', hoverBorder: 'hover:border-emerald-500/40' },
     { bg: 'bg-cyan-500/10', text: 'text-cyan-400', border: 'border-cyan-500/20', hoverBorder: 'hover:border-cyan-500/40' },
     { bg: 'bg-fuchsia-500/10', text: 'text-fuchsia-400', border: 'border-fuchsia-500/20', hoverBorder: 'hover:border-fuchsia-500/40' },
 ]
@@ -107,6 +108,7 @@ export default function DashboardPage() {
     const { user } = useAuth()
     const { data: projects, isLoading } = useProjects()
     const [showCreateModal, setShowCreateModal] = useState(false)
+    const [settingsProject, setSettingsProject] = useState<Project | null>(null)
 
     const hasProjects = projects && projects.length > 0
 
@@ -157,31 +159,39 @@ export default function DashboardPage() {
                                     {projects.map((project) => {
                                         const color = getProjectColor(project.id);
                                         return (
-                                        <motion.div variants={itemVariants} key={project.id}>
+                                        <motion.div variants={itemVariants} key={project.id} className="relative group/card">
+                                            {/* Settings button — top right, appears on hover */}
+                                            <button
+                                                onClick={(e) => { e.preventDefault(); setSettingsProject(project) }}
+                                                className="absolute top-3 right-3 z-20 h-7 w-7 flex items-center justify-center rounded-lg bg-white/[0.04] border border-white/[0.05] text-zinc-600 opacity-0 group-hover/card:opacity-100 hover:text-zinc-300 hover:bg-white/[0.08] transition-all"
+                                                title="Project settings"
+                                            >
+                                                <Settings2 className="h-3.5 w-3.5" />
+                                            </button>
                                             <Link
                                                 to={`/projects/${project.id}`}
-                                                className={`group relative flex flex-col justify-between p-5 h-[200px] rounded-2xl border border-white/[0.06] bg-white/[0.02] hover:bg-white/[0.04] ${color.hoverBorder} transition-all duration-300 overflow-visible`}
+                                                className={`group relative flex flex-col justify-between p-5 h-[200px] rounded-2xl border border-white/[0.06] bg-white/[0.02] group-hover/card:bg-white/[0.04] ${color.hoverBorder.replace('hover:', 'group-hover/card:')} transition-all duration-300 overflow-visible`}
                                             >
                                                 {/* Background hover subtle glow */}
-                                                <div className="absolute inset-0 bg-white/[0.02] opacity-0 group-hover:opacity-100 transition-opacity duration-500 rounded-2xl pointer-events-none" />
+                                                <div className="absolute inset-0 bg-white/[0.02] opacity-0 group-hover/card:opacity-100 transition-opacity duration-500 rounded-2xl pointer-events-none" />
 
                                                 <div className="relative z-10">
                                                     <div className="flex items-start justify-between mb-4">
                                                         <div className="flex items-center gap-3">
-                                                            <div className={`flex h-11 w-11 items-center justify-center rounded-xl border ${color.bg} ${color.border} ${color.text} font-bold text-[14px] shadow-inner`}>
-                                                                {project.name.charAt(0).toUpperCase()}
-                                                            </div>
+                                                            <Avatar className="h-11 w-11 rounded-xl">
+                                                                {project.avatarUrl && <AvatarImage src={project.avatarUrl} alt={project.name} className="object-cover" />}
+                                                                <AvatarFallback className={`h-full w-full flex items-center justify-center rounded-xl border ${color.bg} ${color.border} ${color.text} font-bold text-[14px] shadow-inner`}>
+                                                                    {project.name.charAt(0).toUpperCase()}
+                                                                </AvatarFallback>
+                                                            </Avatar>
                                                             <div>
-                                                                <h3 className="text-[15px] font-semibold text-zinc-200 group-hover:text-white transition-colors line-clamp-1">
+                                                                <h3 className="text-[15px] font-semibold text-zinc-200 group-hover/card:text-white transition-colors line-clamp-1">
                                                                     {project.name}
                                                                 </h3>
                                                                 <p className="text-[12px] text-zinc-500 mt-0.5">
                                                                     Created by <span className="text-zinc-400">{project.owner?.firstName || project.owner?.login || 'Unknown'}</span>
                                                                 </p>
                                                             </div>
-                                                        </div>
-                                                        <div className="h-8 w-8 rounded-full bg-white/[0.06] border border-white/[0.05] flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-300 transform translate-x-[-10px] group-hover:translate-x-0">
-                                                            <ArrowRight className={`h-4 w-4 ${color.text}`} />
                                                         </div>
                                                     </div>
 
@@ -199,7 +209,7 @@ export default function DashboardPage() {
                                                     </div>
 
                                                     {/* Expandable Avatar Stack */}
-                                                    <div className="flex items-center justify-end -space-x-2 group-hover:space-x-1 transition-all duration-300">
+                                                    <div className="flex items-center justify-end -space-x-2 group-hover/card:space-x-1 transition-all duration-300">
                                                         {project.members?.slice(0, 5).map((member, i) => {
                                                             const mUser = member.user
                                                             const initials = mUser
@@ -226,7 +236,7 @@ export default function DashboardPage() {
                                                             )
                                                         })}
                                                         {project.members && project.members.length > 5 && (
-                                                            <div className="h-7 w-7 rounded-full ring-2 ring-[#181818] bg-zinc-800 flex items-center justify-center text-[10px] text-zinc-400 font-bold z-0 group-hover:ml-1 transition-all">
+                                                            <div className="h-7 w-7 rounded-full ring-2 ring-[#181818] bg-zinc-800 flex items-center justify-center text-[10px] text-zinc-400 font-bold z-0 group-hover/card:ml-1 transition-all">
                                                                 +{project.members.length - 5}
                                                             </div>
                                                         )}
@@ -312,6 +322,13 @@ export default function DashboardPage() {
                             </>
                         )}
                         <CreateProjectModal open={showCreateModal} onClose={() => setShowCreateModal(false)} />
+                        {settingsProject && (
+                            <ProjectSettingsModal
+                                open={true}
+                                onClose={() => setSettingsProject(null)}
+                                project={settingsProject}
+                            />
+                        )}
                     </div>
                 </main>
             </div>

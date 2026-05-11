@@ -1,9 +1,11 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Columns3, Flag, Users, CalendarDays, GitCommitHorizontal, MessageSquare } from 'lucide-react'
+import { Columns3, Flag, Users, CalendarDays, GitCommitHorizontal, MessageSquare, CheckCircle2, AlertTriangle, XCircle } from 'lucide-react'
 import type { Task, Column } from '@/features/tasks/types/tasks.types'
 import type { ProjectMember } from '@/features/projects/types/projects.types'
 import { useUpdateTask } from '@/features/tasks/api/tasks.queries'
+import { useTaskGithubItems } from '@/features/tasks/api/github-items.queries'
+import { useTaskComments } from '@/features/tasks/api/comments.queries'
 import { TaskGithubSection } from './task-github-section'
 import { TaskCommentsSection } from './task-comments-section'
 import {
@@ -14,6 +16,8 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { cn } from "@/lib/utils"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { CalendarCustom } from "@/components/ui/calendar-custom"
 
 const PRIORITIES = [
     { value: 'HIGH', label: 'High', dot: 'bg-red-500', text: 'text-red-400', bg: 'bg-red-500/15' },
@@ -54,10 +58,29 @@ export function TaskEditPanel({
     const [priority, setPriority] = useState<string>('MEDIUM')
     const [columnId, setColumnId] = useState<number | ''>(columns[0]?.id ?? '')
     const [githubCommitHash, setGithubCommitHash] = useState('')
+    const [dueDate, setDueDate] = useState<Date | undefined>(undefined)
     const [showGithub, setShowGithub] = useState(false)
     const [showComments, setShowComments] = useState(false)
-
+    const [isCalendarOpen, setIsCalendarOpen] = useState(false)
     const updateTask = useUpdateTask()
+    const { data: githubItems } = useTaskGithubItems(task?.id ?? 0)
+    const { data: comments = [] } = useTaskComments(task?.id ?? 0)
+
+    const displayScore = (() => {
+        if (!task) return null
+        if (task.qualityScore !== null && task.qualityScore !== undefined) return task.qualityScore
+        if (task.codeScore !== null && task.codeScore !== undefined) return task.codeScore
+
+        if (githubItems && githubItems.length > 0) {
+            const itemsWithScore = githubItems.filter(item => item.codeScore !== null)
+            if (itemsWithScore.length === 0) return null
+            
+            const total = itemsWithScore.reduce((sum, item) => sum + (item.codeScore || 0), 0)
+            return Math.round(total / itemsWithScore.length)
+        }
+
+        return null
+    })()
 
     const hasChanges = useRef(false)
     const debounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -70,7 +93,9 @@ export function TaskEditPanel({
             setPriority(task.priority || 'MEDIUM')
             setColumnId(task.columnId)
             setGithubCommitHash(task.githubCommitHash || '')
+            setDueDate(task.dueDate ? new Date(task.dueDate) : undefined)
             setShowGithub(false)
+            setShowComments(false)
             hasChanges.current = false
         } else {
             setTitle('')
@@ -79,7 +104,9 @@ export function TaskEditPanel({
             setPriority('MEDIUM')
             setColumnId(columns[0]?.id ?? '')
             setGithubCommitHash('')
+            setDueDate(undefined)
             setShowGithub(false)
+            setShowComments(false)
             hasChanges.current = false
         }
     }, [task, columns])
@@ -106,9 +133,10 @@ export function TaskEditPanel({
                 priority,
                 columnId: Number(columnId),
                 githubCommitHash: githubCommitHash || undefined,
+                dueDate: dueDate ? dueDate.toISOString() : null,
             },
         })
-    }, [isEditing, task, title, description, assigneeId, priority, columnId, githubCommitHash, updateTask])
+    }, [isEditing, task, title, description, assigneeId, priority, columnId, githubCommitHash, updateTask, dueDate])
 
     const markChanged = useCallback(() => {
         hasChanges.current = true
@@ -197,8 +225,8 @@ export function TaskEditPanel({
                                     End date
                                 </div>
                                 <div className="flex items-center gap-1.5 text-[11px] font-medium uppercase tracking-wider text-zinc-500">
-                                    <GitCommitHorizontal className="h-3.5 w-3.5" />
-                                    Commit
+                                    <CheckCircle2 className="h-3.5 w-3.5" />
+                                    Score
                                 </div>
 
                                 {/* Values row */}
@@ -306,24 +334,44 @@ export function TaskEditPanel({
                                     </DropdownMenu>
                                 </div>
 
-                                {/* End date — clickable date input */}
+                                {/* End date — custom date picker */}
                                 <div className="flex items-center">
-                                    <input
-                                        type="date"
-                                        className="bg-transparent text-[13px] text-zinc-300 focus:outline-none cursor-pointer w-full"
-                                        style={{ colorScheme: 'dark' }}
-                                    />
+                                    <Popover open={isCalendarOpen} onOpenChange={setIsCalendarOpen}>
+                                        <PopoverTrigger asChild>
+                                            <button className="bg-transparent text-[13px] text-zinc-300 focus:outline-none cursor-pointer w-full text-left hover:text-zinc-100 transition-colors">
+                                                {dueDate ? dueDate.toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' }) : 'Pick a date'}
+                                            </button>
+                                        </PopoverTrigger>
+                                        <PopoverContent className="w-auto p-0 bg-[#1e1e1e] border-white/[0.08] shadow-2xl rounded-xl" align="start">
+                                            <CalendarCustom
+                                                selected={dueDate}
+                                                onSelect={(date: Date | undefined) => {
+                                                    setDueDate(date)
+                                                    markChanged()
+                                                    setIsCalendarOpen(false)
+                                                }}
+                                            />
+                                        </PopoverContent>
+                                    </Popover>
                                 </div>
 
-                                {/* Commit hash */}
+                                {/* Task Score */}
                                 <div className="flex items-center">
-                                    <input
-                                        type="text"
-                                        value={githubCommitHash}
-                                        onChange={(e) => handleCommitChange(e.target.value)}
-                                        placeholder="—"
-                                        className="bg-transparent text-[13px] text-zinc-300 placeholder:text-zinc-600 focus:outline-none w-full font-mono"
-                                    />
+                                    {displayScore !== null ? (
+                                        <span className={cn(
+                                            "inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-[12px] font-semibold",
+                                            displayScore >= 80 ? "text-emerald-400 border-emerald-500/20 bg-emerald-500/10" :
+                                            displayScore >= 50 ? "text-amber-400 border-amber-500/20 bg-amber-500/10" :
+                                            "text-red-400 border-red-500/20 bg-red-500/10"
+                                        )}>
+                                            {displayScore >= 80 ? <CheckCircle2 className="h-3.5 w-3.5" /> : 
+                                             displayScore >= 50 ? <AlertTriangle className="h-3.5 w-3.5" /> : 
+                                             <XCircle className="h-3.5 w-3.5" />}
+                                            {displayScore}
+                                        </span>
+                                    ) : (
+                                        <span className="text-[13px] text-zinc-600">—</span>
+                                    )}
                                 </div>
                             </div>
 
@@ -352,6 +400,9 @@ export function TaskEditPanel({
                                     >
                                         <GitCommitHorizontal className="h-4 w-4" />
                                         {showGithub ? 'Hide Linked Code' : 'Show Linked Code'}
+                                        <span className="ml-1.5 font-mono text-[10px] px-1.5 py-0.5 rounded bg-white/[0.06] text-white">
+                                            {githubItems?.length || 0}
+                                        </span>
                                     </button>
                                     <button
                                         onClick={() => { setShowComments(!showComments); setShowGithub(false); }}
@@ -362,6 +413,9 @@ export function TaskEditPanel({
                                     >
                                         <MessageSquare className="h-4 w-4" />
                                         {showComments ? 'Hide Comments' : 'Show Comments'}
+                                        <span className="ml-1.5 font-mono text-[10px] px-1.5 py-0.5 rounded bg-white/[0.06] text-white">
+                                            {comments.length}
+                                        </span>
                                     </button>
                                 </div>
                                 <AnimatePresence>

@@ -3,9 +3,10 @@ import type React from "react"
 import { useState, useRef, useEffect } from "react"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { cn } from "@/lib/utils"
-import { Pencil } from "lucide-react"
+import { Pencil, ExternalLink, Trash2, CalendarDays } from "lucide-react"
 import type { Task } from "@/features/tasks/types/tasks.types"
 import { useTaskGithubItems } from "@/features/tasks/api/github-items.queries"
+import { useDeleteTask } from "@/features/tasks/api/tasks.queries"
 
 declare global {
   interface Window {
@@ -19,9 +20,10 @@ interface TaskCardProps {
   colorRGB?: string
   onEditTask: (task: Task) => void
   onOpenPanel: (task: Task) => void
+  onContextMenu?: (task: Task, x: number, y: number) => void
 }
 
-export function TaskCard({ task, colorRGB, onEditTask, onOpenPanel }: TaskCardProps) {
+export function TaskCard({ task, colorRGB, onEditTask, onOpenPanel, onContextMenu }: TaskCardProps) {
   const [isDragging, setIsDragging] = useState(false)
   const dragGhostRef = useRef<HTMLElement | null>(null)
   const dragOffset = useRef({ x: 0, y: 0 })
@@ -147,6 +149,35 @@ export function TaskCard({ task, colorRGB, onEditTask, onOpenPanel }: TaskCardPr
     ? task.assignee.firstName?.charAt(0) || task.assignee.login.charAt(0)
     : null
 
+  const getDueDateInfo = (dueDateStr: string) => {
+    const due = new Date(dueDateStr)
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+    due.setHours(0, 0, 0, 0)
+    const diffTime = due.getTime() - today.getTime()
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
+    
+    let style = "bg-transparent text-zinc-400 border border-white/10"
+    let iconStyle = "text-zinc-500"
+    
+    if (diffDays < 0) {
+      style = "bg-transparent text-red-500 border border-red-500/30"
+      iconStyle = "text-red-500"
+    } else if (diffDays === 0) {
+      style = "bg-transparent text-red-500 border border-red-500/30"
+      iconStyle = "text-red-500"
+    } else if (diffDays <= 3) {
+      style = "bg-transparent text-amber-500 border border-amber-500/30"
+      iconStyle = "text-amber-500"
+    }
+    
+    return {
+      style,
+      iconStyle,
+      label: due.toLocaleDateString('en-US', { day: 'numeric', month: 'short' })
+    }
+  }
+
   return (
     <div
       draggable
@@ -163,6 +194,10 @@ export function TaskCard({ task, colorRGB, onEditTask, onOpenPanel }: TaskCardPr
         handleDragEnd()
         window.__draggingTaskPriority = undefined
         window.__draggingTaskId = undefined
+      }}
+      onContextMenu={(e) => {
+        e.preventDefault()
+        onContextMenu?.(task, e.clientX, e.clientY)
       }}
       data-priority={task.priority || "none"}
       className={cn(
@@ -209,6 +244,16 @@ export function TaskCard({ task, colorRGB, onEditTask, onOpenPanel }: TaskCardPr
           <div className="flex h-5 items-center rounded border border-white/5 bg-white/5 px-1.5 text-[10px] font-mono font-medium text-zinc-400">
             #{task.id}
           </div>
+          {/* Due Date Badge */}
+          {task.dueDate && (() => {
+            const { style, iconStyle, label } = getDueDateInfo(task.dueDate)
+            return (
+              <div className={cn("flex h-5 items-center rounded border px-1.5 text-[10px] font-medium gap-1.5", style)}>
+                <CalendarDays className={cn("h-3 w-3", iconStyle)} />
+                {label}
+              </div>
+            )
+          })()}
           {/* Priority Badge */}
           {task.priority && (
             <div className={cn(
