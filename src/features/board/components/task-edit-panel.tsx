@@ -113,8 +113,8 @@ export function TaskEditPanel({
 
     const getMemberName = (m: ProjectMember) =>
         m.user
-            ? m.user.firstName && m.user.lastName
-                ? `${m.user.firstName} ${m.user.lastName}`
+            ? m.user.firstName || m.user.lastName
+                ? `${m.user.firstName || ""} ${m.user.lastName || ""}`.trim()
                 : m.user.login
             : `User #${m.userId}`
 
@@ -246,7 +246,7 @@ export function TaskEditPanel({
                                                 <span className="pr-1">{currentColumn?.name || "Status"}</span>
                                             </div>
                                         </DropdownMenuTrigger>
-                                        <DropdownMenuContent className="bg-[#1e1e1e] border-white/[0.08] p-1 shadow-2xl rounded-xl">
+                                        <DropdownMenuContent side="bottom" className="bg-[#1e1e1e] border-white/[0.08] p-1 shadow-2xl rounded-xl">
                                             {columns.map((c) => (
                                                 <DropdownMenuItem
                                                     key={c.id}
@@ -283,7 +283,7 @@ export function TaskEditPanel({
                                                 </span>
                                             </div>
                                         </DropdownMenuTrigger>
-                                        <DropdownMenuContent className="bg-[#1e1e1e] border-white/[0.08] p-1 shadow-2xl rounded-xl">
+                                        <DropdownMenuContent side="bottom" className="bg-[#1e1e1e] border-white/[0.08] p-1 shadow-2xl rounded-xl">
                                             <DropdownMenuItem
                                                 onClick={() => handleAssigneeChange("")}
                                                 className="px-3 py-2 rounded-lg text-zinc-400 focus:bg-white/[0.03] focus:text-zinc-200 cursor-pointer"
@@ -319,7 +319,7 @@ export function TaskEditPanel({
                                                 </span>
                                             </div>
                                         </DropdownMenuTrigger>
-                                        <DropdownMenuContent className="bg-[#1e1e1e] border-white/[0.08] p-1 shadow-2xl rounded-xl">
+                                        <DropdownMenuContent side="bottom" className="bg-[#1e1e1e] border-white/[0.08] p-1 shadow-2xl rounded-xl">
                                             {PRIORITIES.map((p) => (
                                                 <DropdownMenuItem
                                                     key={p.value}

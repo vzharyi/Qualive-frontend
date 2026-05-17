@@ -74,13 +74,13 @@ export function HowItWorksSection() {
                             transition={{ duration: 0.5, delay: i * 0.15 }}
                             className="relative text-center group"
                         >
-                            <div className="w-24 h-24 mx-auto mb-6 rounded-2xl border border-white/[0.12] bg-[#111115] flex items-center justify-center relative group-hover:border-emerald-500/30 group-hover:bg-emerald-500/5 transition-all duration-500 z-10">
-                                <div className="text-zinc-400 group-hover:text-emerald-400 transition-colors duration-300">
+                            <div className="w-24 h-24 mx-auto mb-6 rounded-2xl border border-white/[0.08] bg-white/[0.02] backdrop-blur-sm flex items-center justify-center relative group-hover:border-amber-500/30 group-hover:bg-amber-500/5 transition-all duration-500 z-10 shadow-lg shadow-black/20 group-hover:shadow-amber-500/10">
+                                <div className="text-zinc-400 group-hover:text-amber-500 transition-colors duration-300">
                                     {step.icon}
                                 </div>
                             </div>
 
-                            <span className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/3 w-7 h-7 rounded-full bg-[#111115] border border-white/[0.12] flex items-center justify-center text-[10px] font-mono text-zinc-500 group-hover:text-emerald-400 group-hover:border-emerald-500/30 transition-all duration-300 z-20">
+                            <span className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/3 w-7 h-7 rounded-full bg-[#131313] border border-white/[0.12] flex items-center justify-center text-[10px] font-mono text-zinc-500 group-hover:text-amber-500 group-hover:border-amber-500/30 transition-all duration-300 z-20">
                                 {step.number}
                             </span>
 

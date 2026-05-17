@@ -5,11 +5,8 @@ export function FooterSection() {
         <footer className="border-t border-white/[0.08] py-12">
             <div className="max-w-6xl mx-auto px-6">
                 <div className="flex flex-col sm:flex-row items-center justify-between gap-6">
-                    {/* Logo */}
                     <Link to="/" className="flex items-center gap-2">
-                        <div className="w-7 h-7 rounded-md bg-gradient-to-br from-emerald-400 to-emerald-600 flex items-center justify-center text-black font-bold text-xs">
-                            Q
-                        </div>
+                        <img src="/logo.png" alt="Qualive Logo" className="w-6 h-6 object-contain" />
                         <span className="text-white font-semibold tracking-tight">Qualive</span>
                     </Link>
 

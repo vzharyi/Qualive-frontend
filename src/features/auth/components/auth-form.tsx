@@ -1,5 +1,6 @@
 import { useState, useRef, useLayoutEffect, type ReactNode } from "react"
 import { motion } from "framer-motion"
+import { Eye, EyeOff } from "lucide-react"
 import { Link, useLocation, useNavigate } from "react-router-dom"
 import { useLogin, useRegister } from "../api/auth.queries"
 import { authApi } from "../api/auth.api"
@@ -29,7 +30,7 @@ function GitHubIcon({ className }: { className?: string }) {
 
 /* ─── Shared input style ─── */
 const inputClass =
-    "w-full h-10 px-3.5 rounded-lg border border-white/[0.07] bg-white/[0.03] text-[13px] text-white placeholder:text-zinc-600 focus:outline-none focus:border-emerald-500/40 focus:bg-white/[0.05] transition-all duration-200"
+    "w-full h-10 px-3.5 rounded-lg border border-white/[0.07] bg-white/[0.03] text-[13px] text-white placeholder:text-zinc-600 focus:outline-none focus:border-white/20 focus:bg-white/[0.05] transition-all duration-200"
 const inputErrorClass =
     "w-full h-10 px-3.5 rounded-lg border border-red-500/40 bg-white/[0.03] text-[13px] text-white placeholder:text-zinc-600 focus:outline-none focus:border-red-500/60 focus:bg-white/[0.05] transition-all duration-200"
 
@@ -82,6 +83,8 @@ export function AuthForm() {
     const [firstName, setFirstName] = useState("")
     const [lastName, setLastName] = useState("")
     const [confirmPassword, setConfirmPassword] = useState("")
+    const [showPassword, setShowPassword] = useState(false)
+    const [showConfirmPassword, setShowConfirmPassword] = useState(false)
 
     // Error state
     const [fieldErrors, setFieldErrors] = useState<FieldErrors>({})
@@ -97,6 +100,17 @@ export function AuthForm() {
     const toggleMode = () => {
         const next = mode === "login" ? "register" : "login"
         setMode(next)
+        
+        // Reset all fields
+        setLogin("")
+        setEmail("")
+        setPassword("")
+        setFirstName("")
+        setLastName("")
+        setConfirmPassword("")
+        setShowPassword(false)
+        setShowConfirmPassword(false)
+        
         setFieldErrors({})
         setServerError("")
         navigate(next === "login" ? "/login" : "/register", { replace: true })
@@ -175,8 +189,7 @@ export function AuthForm() {
 
     return (
         <div className="relative w-full max-w-[400px]">
-            {/* Ambient glow — subtle, off-center */}
-            <div className="absolute -top-12 -right-16 w-[280px] h-[280px] bg-emerald-500/[0.045] rounded-full blur-[100px] pointer-events-none" />
+            {/* Removed ambient glow to keep it clean */}
 
             <motion.div
                 initial={{ opacity: 0, y: 24 }}
@@ -187,9 +200,7 @@ export function AuthForm() {
                 {/* ─── Header ─── */}
                 <div className="flex items-center justify-center gap-3 mb-7">
                     <Link to="/" className="shrink-0 group">
-                        <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-emerald-400 to-emerald-600 flex items-center justify-center text-black font-bold text-xs group-hover:scale-110 transition-transform duration-200">
-                            Q
-                        </div>
+                        <img src="/logo.png" alt="Qualive Logo" className="w-8 h-8 object-contain group-hover:scale-110 transition-transform duration-200" />
                     </Link>
                     <h1 className="text-[22px] font-semibold text-white tracking-[-0.01em]">
                         {isLogin ? "Log in to Qualive" : "Create your account"}
@@ -197,7 +208,7 @@ export function AuthForm() {
                 </div>
 
                 {/* ─── Card ─── */}
-                <div className="rounded-xl border border-white/[0.07] bg-[#0e0e14]/90 backdrop-blur-md overflow-hidden">
+                <div className="rounded-xl border border-white/[0.05] bg-black/40 backdrop-blur-xl shadow-2xl overflow-hidden">
                     <div className="p-6">
                         {/* ─── OAuth label (divider style) ─── */}
                         <div className="relative mb-4">
@@ -205,7 +216,7 @@ export function AuthForm() {
                                 <div className="w-full border-t border-white/[0.05]" />
                             </div>
                             <div className="relative flex justify-center">
-                                <span className="px-2.5 text-[11px] uppercase tracking-[0.06em] text-zinc-600 bg-[#0e0e14]">
+                                <span className="px-2.5 text-[11px] uppercase tracking-[0.06em] text-zinc-600 bg-transparent backdrop-blur-md">
                                     {isLogin ? "Log in with" : "Sign up with"}
                                 </span>
                             </div>
@@ -237,7 +248,7 @@ export function AuthForm() {
                                 <div className="w-full border-t border-white/[0.05]" />
                             </div>
                             <div className="relative flex justify-center">
-                                <span className="px-2.5 text-[11px] uppercase tracking-[0.06em] text-zinc-600 bg-[#0e0e14]">
+                                <span className="px-2.5 text-[11px] uppercase tracking-[0.06em] text-zinc-600 bg-transparent backdrop-blur-md">
                                     or continue with
                                 </span>
                             </div>
@@ -326,20 +337,30 @@ export function AuthForm() {
                                         Password
                                     </label>
                                     {isLogin && (
-                                        <button type="button" className="text-[11px] text-zinc-600 hover:text-emerald-400/70 transition-colors cursor-pointer">
+                                        <button type="button" className="text-[11px] text-zinc-600 hover:text-white transition-colors cursor-pointer">
                                             Forgot?
                                         </button>
                                     )}
                                 </div>
-                                <input
-                                    id="password"
-                                    type="password"
-                                    placeholder="••••••••"
-                                    value={password}
-                                    onChange={(e) => setPassword(e.target.value)}
-                                    required
-                                    className={fieldErrors.password ? inputErrorClass : inputClass}
-                                />
+                                <div className="relative">
+                                    <input
+                                        id="password"
+                                        type={showPassword ? "text" : "password"}
+                                        placeholder="••••••••"
+                                        value={password}
+                                        onChange={(e) => setPassword(e.target.value)}
+                                        required
+                                        className={`${fieldErrors.password ? inputErrorClass : inputClass} pr-10`}
+                                    />
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowPassword(!showPassword)}
+                                        className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-zinc-300 transition-colors"
+                                        tabIndex={-1}
+                                    >
+                                        {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                                    </button>
+                                </div>
                                 <FieldError message={fieldErrors.password} />
                             </div>
 
@@ -348,21 +369,31 @@ export function AuthForm() {
                                 <label htmlFor="confirm-password" className="block text-[12px] text-zinc-400 mb-1.5 font-medium">
                                     Confirm password
                                 </label>
-                                <input
-                                    id="confirm-password"
-                                    type="password"
-                                    placeholder="••••••••"
-                                    value={confirmPassword}
-                                    onChange={(e) => setConfirmPassword(e.target.value)}
-                                    className={fieldErrors.confirmPassword ? inputErrorClass : inputClass}
-                                />
+                                <div className="relative">
+                                    <input
+                                        id="confirm-password"
+                                        type={showConfirmPassword ? "text" : "password"}
+                                        placeholder="••••••••"
+                                        value={confirmPassword}
+                                        onChange={(e) => setConfirmPassword(e.target.value)}
+                                        className={`${fieldErrors.confirmPassword ? inputErrorClass : inputClass} pr-10`}
+                                    />
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                                        className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-zinc-300 transition-colors"
+                                        tabIndex={-1}
+                                    >
+                                        {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                                    </button>
+                                </div>
                                 <FieldError message={fieldErrors.confirmPassword} />
                             </CollapsibleField>
 
                             <button
                                 type="submit"
                                 disabled={isLoading}
-                                className="w-full h-10 mt-1 rounded-lg bg-emerald-500 text-[13px] text-black font-semibold hover:bg-emerald-400 active:scale-[0.98] transition-all duration-150 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                                className="w-full h-10 mt-1 rounded-lg bg-white/[0.08] text-[13px] text-zinc-200 border border-white/[0.05] hover:bg-white/[0.12] hover:text-white font-semibold active:scale-[0.98] transition-all duration-150 cursor-pointer disabled:opacity-40 disabled:hover:bg-white/[0.08] disabled:cursor-not-allowed"
                             >
                                 {isLoading
                                     ? "Loading..."
@@ -388,13 +419,6 @@ export function AuthForm() {
                     </div>
                 </div>
 
-                {/* ─── Terms ─── */}
-                <p className="text-center text-[11px] text-zinc-700 mt-5 leading-relaxed">
-                    By continuing, you agree to our{" "}
-                    <a href="#" className="text-zinc-500 hover:text-zinc-400 transition-colors">Terms</a>
-                    {" "}and{" "}
-                    <a href="#" className="text-zinc-500 hover:text-zinc-400 transition-colors">Privacy Policy</a>.
-                </p>
             </motion.div>
         </div>
     )

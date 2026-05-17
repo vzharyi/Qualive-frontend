@@ -13,11 +13,12 @@ export const githubItemKeys = {
 
 // ─── Queries ───
 
-export function useTaskGithubItems(taskId: number) {
+export function useTaskGithubItems(taskId: number, options?: any) {
     return useQuery({
         queryKey: githubItemKeys.byTask(taskId),
         queryFn: () => githubItemsApi.getItems(taskId),
         enabled: !!taskId,
+        ...options,
     })
 }
 

@@ -1,4 +1,6 @@
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
+import { useQueryClient } from '@tanstack/react-query'
+import { taskKeys } from '@/features/tasks/api/tasks.queries'
 import {
     GitPullRequest,
     GitCommitHorizontal,
@@ -360,10 +362,31 @@ function GithubItemSelector({
 
 // ─── Main Component ───
 export function TaskGithubSection({ taskId, projectId }: TaskGithubSectionProps) {
-    const { data: items, isLoading } = useTaskGithubItems(taskId)
+    const queryClient = useQueryClient()
+    const { data: items, isLoading } = useTaskGithubItems(taskId) as any
+    
+    const isAnalyzing = items?.some((item: any) => item.codeScore === null)
+    
+    // Active polling when analyzing
+    useTaskGithubItems(taskId, {
+        refetchInterval: isAnalyzing ? 3000 : false,
+        enabled: !!taskId && !!isAnalyzing
+    })
     const { data: reports } = useAnalysisReports(taskId)
     const unlinkItem = useUnlinkGithubItem()
     const [showSelector, setShowSelector] = useState(false)
+
+    const prevAnalyzing = useRef(false)
+    
+    useEffect(() => {
+        const isAnalyzing = items?.some((item: any) => item.codeScore === null)
+        
+        if (prevAnalyzing.current && !isAnalyzing && items?.length) {
+            queryClient.invalidateQueries({ queryKey: taskKeys.all })
+        }
+        
+        prevAnalyzing.current = isAnalyzing
+    }, [items, queryClient])
 
     const getReportForItem = (githubItemId: number): AnalysisReport | undefined => {
         return reports?.find((r) => r.githubItemId === githubItemId)
@@ -426,7 +449,7 @@ export function TaskGithubSection({ taskId, projectId }: TaskGithubSectionProps)
                 </div>
             ) : (
                 <div className="space-y-2 h-[422px] ">
-                    {items.map((item) => (
+                    {items.map((item: TaskGithubItem) => (
                         <LinkedItemRow
                             key={item.id}
                             item={item}

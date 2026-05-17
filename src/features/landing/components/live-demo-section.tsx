@@ -70,9 +70,9 @@ export function LiveDemoSection() {
     }, [])
 
     const score = qualityScore
-    const scoreColor = score >= 90 ? "text-emerald-400" : score >= 70 ? "text-yellow-400" : "text-rose-400"
-    const scoreBorder = score >= 90 ? "border-emerald-500/30" : score >= 70 ? "border-yellow-500/30" : "border-rose-500/30"
-    const scoreBg = score >= 90 ? "bg-emerald-500/10" : score >= 70 ? "bg-yellow-500/10" : "bg-rose-500/10"
+    const scoreColor = score >= 90 ? "text-zinc-200" : score >= 70 ? "text-amber-400" : "text-rose-400"
+    const scoreBorder = score >= 90 ? "border-white/[0.08]" : score >= 70 ? "border-amber-500/30" : "border-rose-500/30"
+    const scoreBg = score >= 90 ? "bg-white/[0.02]" : score >= 70 ? "bg-amber-500/10" : "bg-rose-500/10"
 
     const errorMap = analyzed ? results.reduce((acc, err) => {
         if (!acc[err.line] || err.severity === "ERROR") acc[err.line] = err.severity;
@@ -105,7 +105,7 @@ export function LiveDemoSection() {
                     initial={{ opacity: 0, y: 30 }}
                     animate={isInView ? { opacity: 1, y: 0 } : {}}
                     transition={{ duration: 0.6, delay: 0.2 }}
-                    className="rounded-2xl border border-white/[0.14] bg-[#111115] overflow-hidden shadow-2xl shadow-emerald-500/5"
+                    className="rounded-2xl border border-white/[0.14] bg-[#111115] overflow-hidden shadow-2xl shadow-black/50"
                 >
                     {/* Window chrome */}
                     <div className="flex items-center justify-between px-4 py-3 border-b border-white/[0.08]">
@@ -128,7 +128,7 @@ export function LiveDemoSection() {
                             <button
                                 onClick={handleAnalyze}
                                 disabled={scanning}
-                                className="px-4 py-1.5 rounded-lg bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-medium hover:bg-emerald-500/20 transition-all duration-200 disabled:opacity-50 flex items-center gap-2"
+                                className="px-4 py-1.5 rounded-lg bg-amber-500/10 border border-amber-500/30 text-amber-500 text-xs font-medium hover:bg-amber-500/20 transition-all duration-200 disabled:opacity-50 flex items-center gap-2"
                             >
                                 {scanning ? (
                                     <>
@@ -161,7 +161,7 @@ export function LiveDemoSection() {
                                         animate={{ top: "100%" }}
                                         exit={{ opacity: 0 }}
                                         transition={{ duration: 1.5, ease: "linear" }}
-                                        className="absolute left-0 right-0 h-0.5 bg-emerald-400 z-10 shadow-[0_0_20px_rgba(52,211,153,0.5)]"
+                                        className="absolute left-0 right-0 h-0.5 bg-amber-500 z-10 shadow-[0_0_20px_rgba(245,158,11,0.5)]"
                                     />
                                 )}
                             </AnimatePresence>
@@ -227,7 +227,7 @@ export function LiveDemoSection() {
                             {scanning && (
                                 <div className="h-full flex items-center justify-center">
                                     <div className="text-center">
-                                        <div className="w-8 h-8 rounded-full border-2 border-emerald-500/30 border-t-emerald-400 animate-spin mx-auto mb-4" />
+                                        <div className="w-8 h-8 rounded-full border-2 border-amber-500/30 border-t-amber-500 animate-spin mx-auto mb-4" />
                                         <p className="text-zinc-500 text-sm">Analyzing code...</p>
                                     </div>
                                 </div>
@@ -249,10 +249,10 @@ export function LiveDemoSection() {
 
                                         {results.length === 0 ? (
                                             <div className="text-center py-8">
-                                                <svg className="w-10 h-10 mx-auto text-emerald-400 mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                                                <svg className="w-10 h-10 mx-auto text-zinc-400 mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
                                                     <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                                                 </svg>
-                                                <p className="text-emerald-400 text-sm font-medium">Perfect! No issues found.</p>
+                                                <p className="text-zinc-400 text-sm font-medium">Perfect! No issues found.</p>
                                             </div>
                                         ) : (
                                             <div className="space-y-2 max-h-[300px] overflow-y-auto overflow-x-hidden custom-scrollbar">

@@ -10,10 +10,10 @@ const problems = [
         ),
         title: "Code Blindness",
         description: "In regular trackers (Jira/Trello) you move a task to \"Done\" without knowing how bad the code is inside.",
-        color: "text-rose-400",
-        border: "border-rose-500/20 hover:border-rose-500/40",
-        bg: "bg-rose-500/5",
-        glow: "group-hover:shadow-rose-500/10",
+        color: "text-zinc-400 group-hover:text-amber-500",
+        border: "border-white/[0.05] hover:border-white/[0.12]",
+        bg: "bg-white/[0.02] backdrop-blur-md",
+        glow: "shadow-2xl shadow-transparent group-hover:shadow-black/50",
     },
     {
         icon: (
@@ -23,10 +23,10 @@ const problems = [
         ),
         title: "Auto-Audit",
         description: "Qualive connects to GitHub, scans every commit with ESLint and blocks \"dirty\" code automatically.",
-        color: "text-violet-400",
-        border: "border-violet-500/20 hover:border-violet-500/40",
-        bg: "bg-violet-500/5",
-        glow: "group-hover:shadow-violet-500/10",
+        color: "text-zinc-400 group-hover:text-amber-500",
+        border: "border-white/[0.05] hover:border-white/[0.12]",
+        bg: "bg-white/[0.02] backdrop-blur-md",
+        glow: "shadow-2xl shadow-transparent group-hover:shadow-black/50",
     },
     {
         icon: (
@@ -36,10 +36,10 @@ const problems = [
         ),
         title: "Transparent Quality",
         description: "Visualize technical debt. The unique Q(t) metric shows the real health of your project in real-time.",
-        color: "text-emerald-400",
-        border: "border-emerald-500/20 hover:border-emerald-500/40",
-        bg: "bg-emerald-500/5",
-        glow: "group-hover:shadow-emerald-500/10",
+        color: "text-zinc-400 group-hover:text-amber-500",
+        border: "border-white/[0.05] hover:border-white/[0.12]",
+        bg: "bg-white/[0.02] backdrop-blur-md",
+        glow: "shadow-2xl shadow-transparent group-hover:shadow-black/50",
     },
 ]
 

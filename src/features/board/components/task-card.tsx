@@ -118,7 +118,15 @@ export function TaskCard({ task, colorRGB, onEditTask, onOpenPanel, onContextMen
   }
 
   // Fetch linked items to aggregate score if not provided by backend
-  const { data: githubItems } = useTaskGithubItems(task.id)
+  const { data: githubItems } = useTaskGithubItems(task.id) as any
+  
+  const isAnalyzing = githubItems?.some((item: any) => item.codeScore === null)
+  
+  // Active polling on the board when analyzing
+  useTaskGithubItems(task.id, {
+      refetchInterval: isAnalyzing ? 5000 : false,
+      enabled: !!task.id && !!isAnalyzing
+  })
   
   // Logic to determine what score to show
   const displayScore = (() => {
@@ -128,10 +136,10 @@ export function TaskCard({ task, colorRGB, onEditTask, onOpenPanel, onContextMen
 
     // 2. Fallback: Aggregate from linked GitHub items on the frontend
     if (githubItems && githubItems.length > 0) {
-      const itemsWithScore = githubItems.filter(item => item.codeScore !== null)
+      const itemsWithScore = githubItems.filter((item: any) => item.codeScore !== null)
       if (itemsWithScore.length === 0) return null
       
-      const total = itemsWithScore.reduce((sum, item) => sum + (item.codeScore || 0), 0)
+      const total = itemsWithScore.reduce((sum: number, item: any) => sum + (item.codeScore || 0), 0)
       return Math.round(total / itemsWithScore.length)
     }
 
@@ -140,8 +148,8 @@ export function TaskCard({ task, colorRGB, onEditTask, onOpenPanel, onContextMen
 
   // Assignee display
   const assigneeName = task.assignee
-    ? task.assignee.firstName && task.assignee.lastName
-      ? `${task.assignee.firstName} ${task.assignee.lastName}`
+    ? task.assignee.firstName || task.assignee.lastName
+      ? `${task.assignee.firstName || ""} ${task.assignee.lastName || ""}`.trim()
       : task.assignee.login
     : null
 

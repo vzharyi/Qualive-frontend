@@ -8,6 +8,8 @@ import {
   Github,
   X,
   Clock,
+  Columns3,
+  List,
   AlignLeft,
   Settings2,
   Link2,
@@ -45,8 +47,8 @@ interface AppToolbarProps {
 }
 
 const views: { id: ViewType; label: string; icon: any }[] = [
-  { id: "kanban", label: "Board", icon: AlignLeft },
-  { id: "list", label: "List", icon: AlignLeft },
+  { id: "kanban", label: "Board", icon: Columns3 },
+  { id: "list", label: "List", icon: List },
 ]
 
 export function AppToolbar({
@@ -97,22 +99,30 @@ export function AppToolbar({
           style={{ maxWidth: contentWidth ? `${contentWidth}px` : "100%" }}
         >
           {/* Left side: View switcher */}
-        <div className="flex items-center gap-0.5 rounded-lg bg-white/[0.03] border border-white/[0.06] p-0.5">
-          {views.map((view) => (
-            <button
-              key={view.id}
-              onClick={() => onViewModeChange(view.id)}
-              className={cn(
-                "flex items-center gap-1.5 h-7 px-2.5 rounded-md text-[13px] transition-all cursor-pointer",
-                viewMode === view.id
-                  ? "bg-white/[0.08] text-white shadow-sm"
-                  : "text-zinc-500 hover:text-zinc-300 hover:bg-white/[0.03]",
-              )}
-            >
-              <view.icon className="h-3.5 w-3.5" />
-              <span className="hidden sm:inline">{view.label}</span>
-            </button>
-          ))}
+        <div className="flex items-center gap-0.5 rounded-lg bg-white/[0.03] border border-white/[0.06] p-0.5 relative">
+          {views.map((view) => {
+            const active = viewMode === view.id
+            return (
+              <button
+                key={view.id}
+                onClick={() => onViewModeChange(view.id)}
+                className={cn(
+                  "relative flex items-center gap-1.5 h-7 px-3 rounded-md text-[13px] font-medium transition-colors cursor-pointer z-10",
+                  active ? "text-white" : "text-zinc-500 hover:text-zinc-300"
+                )}
+              >
+                {active && (
+                  <motion.div
+                    layoutId="active-view-bg"
+                    className="absolute inset-0 bg-white/[0.08] rounded-md shadow-[inset_0_0_0_1px_rgba(255,255,255,0.05)]"
+                    transition={{ type: "spring", bounce: 0.15, duration: 0.5 }}
+                  />
+                )}
+                <view.icon className={cn("h-3.5 w-3.5 relative z-10 transition-colors", active ? "text-white" : "text-zinc-600")} />
+                <span className="hidden sm:inline relative z-10">{view.label}</span>
+              </button>
+            )
+          })}
         </div>
 
         {/* Right side: Filters and settings */}

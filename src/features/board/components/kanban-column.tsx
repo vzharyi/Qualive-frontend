@@ -98,6 +98,7 @@ export function KanbanColumn({
   const [showEditPriorityPicker, setShowEditPriorityPicker] = useState(false)
   const [showEditAssigneePicker, setShowEditAssigneePicker] = useState(false)
   const editFormRef = useRef<HTMLDivElement>(null)
+  const [openUpwards, setOpenUpwards] = useState(false)
   const settingsBtnRef = useRef<HTMLButtonElement>(null)
 
   const [isSettingsOpen, setIsSettingsOpen] = useState(false)
@@ -264,8 +265,8 @@ export function KanbanColumn({
 
   const getMemberName = (m: ProjectMember) =>
     m.user
-      ? m.user.firstName && m.user.lastName
-        ? `${m.user.firstName} ${m.user.lastName}`
+      ? m.user.firstName || m.user.lastName
+        ? `${m.user.firstName || ""} ${m.user.lastName || ""}`.trim()
         : m.user.login
       : `User #${m.userId}`
 
@@ -505,7 +506,12 @@ export function KanbanColumn({
                     {/* Assignee chip */}
                     <div className="relative picker-trigger">
                       <button
-                        onClick={() => { setShowEditAssigneePicker(!showEditAssigneePicker); setShowEditPriorityPicker(false) }}
+                        onClick={(e) => {
+                          const rect = e.currentTarget.getBoundingClientRect()
+                          setOpenUpwards(window.innerHeight - rect.bottom < 200)
+                          setShowEditAssigneePicker(!showEditAssigneePicker)
+                          setShowEditPriorityPicker(false)
+                        }}
                         className={cn(
                           "flex items-center gap-1.5 h-7 px-2.5 rounded-full text-[12px] font-medium border transition-all cursor-pointer picker-trigger",
                           editAssigneeId
@@ -536,7 +542,7 @@ export function KanbanColumn({
                         )}
                       </button>
                       {showEditAssigneePicker && (
-                        <div className="absolute left-0 top-full mt-1.5 z-40 w-52 rounded-xl border border-white/[0.1] bg-[#1a1a1a] shadow-2xl shadow-black/60 overflow-hidden picker-container">
+                        <div className={cn("absolute left-0 z-40 w-52 rounded-xl border border-white/[0.1] bg-[#1a1a1a] shadow-2xl shadow-black/60 overflow-hidden picker-container", openUpwards ? "bottom-full mb-1.5" : "top-full mt-1.5")}>
                           <div className="p-1.5 max-h-[180px] overflow-y-auto flex flex-col gap-0.5 [&::-webkit-scrollbar]:w-1 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-zinc-700 [&::-webkit-scrollbar-thumb]:rounded-full">
                             {members.length === 0 ? (
                               <div className="px-3 py-2 text-[12px] text-zinc-500">No members</div>
@@ -568,7 +574,12 @@ export function KanbanColumn({
                     {/* Priority chip */}
                     <div className="relative picker-trigger">
                       <button
-                        onClick={() => { setShowEditPriorityPicker(!showEditPriorityPicker); setShowEditAssigneePicker(false) }}
+                        onClick={(e) => {
+                          const rect = e.currentTarget.getBoundingClientRect()
+                          setOpenUpwards(window.innerHeight - rect.bottom < 150)
+                          setShowEditPriorityPicker(!showEditPriorityPicker)
+                          setShowEditAssigneePicker(false)
+                        }}
                         className={cn(
                           "flex items-center gap-1.5 h-7 px-2.5 rounded-full text-[12px] font-medium border transition-all cursor-pointer picker-trigger",
                           editPriority === 'HIGH' ? "bg-red-500/10 border-red-500/20 text-red-400" :
@@ -593,7 +604,7 @@ export function KanbanColumn({
                         )}
                       </button>
                       {showEditPriorityPicker && (
-                        <div className="absolute left-0 top-full mt-1.5 z-40 w-40 rounded-xl border border-white/[0.1] bg-[#1a1a1a] shadow-2xl shadow-black/60 overflow-hidden picker-container">
+                        <div className={cn("absolute left-0 z-40 w-40 rounded-xl border border-white/[0.1] bg-[#1a1a1a] shadow-2xl shadow-black/60 overflow-hidden picker-container", openUpwards ? "bottom-full mb-1.5" : "top-full mt-1.5")}>
                           <div className="p-1.5 flex flex-col gap-0.5">
                             {priorityOptions.map((p) => (
                               <button
@@ -682,7 +693,12 @@ export function KanbanColumn({
               {/* Assignee chip */}
               <div className="relative picker-trigger">
                 <button
-                  onClick={() => { setShowAssigneePicker(!showAssigneePicker); setShowPriorityPicker(false) }}
+                  onClick={(e) => {
+                    const rect = e.currentTarget.getBoundingClientRect()
+                    setOpenUpwards(window.innerHeight - rect.bottom < 200)
+                    setShowAssigneePicker(!showAssigneePicker)
+                    setShowPriorityPicker(false)
+                  }}
                   className={cn(
                     "flex items-center gap-1.5 h-7 px-2.5 rounded-full text-[12px] font-medium border transition-all cursor-pointer picker-trigger",
                     inlineAssigneeId
@@ -714,7 +730,7 @@ export function KanbanColumn({
                   )}
                 </button>
                 {showAssigneePicker && (
-                  <div className="absolute left-0 bottom-full mb-1.5 z-40 w-52 rounded-xl border border-white/[0.1] bg-[#1a1a1a] shadow-2xl shadow-black/60 overflow-hidden picker-container">
+                  <div className={cn("absolute left-0 z-40 w-52 rounded-xl border border-white/[0.1] bg-[#1a1a1a] shadow-2xl shadow-black/60 overflow-hidden picker-container", openUpwards ? "bottom-full mb-1.5" : "top-full mt-1.5")}>
                     <div className="p-1.5 max-h-[180px] overflow-y-auto flex flex-col gap-0.5 [&::-webkit-scrollbar]:w-1 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-zinc-700 [&::-webkit-scrollbar-thumb]:rounded-full">
                       {members.length === 0 ? (
                         <div className="px-3 py-2 text-[12px] text-zinc-500">No members</div>
@@ -746,7 +762,12 @@ export function KanbanColumn({
               {/* Priority chip */}
               <div className="relative picker-trigger">
                 <button
-                  onClick={() => { setShowPriorityPicker(!showPriorityPicker); setShowAssigneePicker(false) }}
+                  onClick={(e) => {
+                    const rect = e.currentTarget.getBoundingClientRect()
+                    setOpenUpwards(window.innerHeight - rect.bottom < 150)
+                    setShowPriorityPicker(!showPriorityPicker)
+                    setShowAssigneePicker(false)
+                  }}
                   className={cn(
                     "flex items-center gap-1.5 h-7 px-2.5 rounded-full text-[12px] font-medium border transition-all cursor-pointer picker-trigger",
                     inlinePriority === 'HIGH' ? "bg-red-500/10 border-red-500/20 text-red-400" :
@@ -774,7 +795,7 @@ export function KanbanColumn({
                   )}
                 </button>
                 {showPriorityPicker && (
-                  <div className="absolute left-0 bottom-full mb-1.5 z-40 w-40 rounded-xl border border-white/[0.1] bg-[#1a1a1a] shadow-2xl shadow-black/60 overflow-hidden picker-container">
+                  <div className={cn("absolute left-0 z-40 w-40 rounded-xl border border-white/[0.1] bg-[#1a1a1a] shadow-2xl shadow-black/60 overflow-hidden picker-container", openUpwards ? "bottom-full mb-1.5" : "top-full mt-1.5")}>
                     <div className="p-1.5 flex flex-col gap-0.5">
                       {priorityOptions.map((p) => (
                         <button

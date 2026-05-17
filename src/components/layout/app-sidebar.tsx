@@ -13,10 +13,10 @@ import {
   Settings,
   Settings2,
   HelpCircle,
-  Hash,
   ChevronRight,
   Inbox,
   CheckCircle2,
+  Pin,
 } from "lucide-react"
 import { useProjects } from "@/features/projects/api/projects.queries"
 import { ProjectSettingsModal } from "@/features/projects/components/project-settings-modal"
@@ -152,7 +152,7 @@ function ProjectItem({
     <Link
       to={`/projects/${id}`}
       className={cn(
-        "group relative flex items-center gap-2.5 px-2.5 py-1.5 rounded-md transition-all mx-0.5",
+        "group relative flex items-center gap-2.5 px-2.5 py-1.5 rounded-md transition-all mx-0.5 w-full min-w-0",
         active 
           ? "bg-white/[0.08] text-white shadow-[inset_0_0_0_1px_rgba(255,255,255,0.05)]" 
           : "text-zinc-500 hover:text-zinc-300 hover:bg-white/[0.03]"
@@ -165,9 +165,11 @@ function ProjectItem({
         </AvatarFallback>
       </Avatar>
       
-      <span className="flex-1 truncate text-[13px] font-medium tracking-tight">{name}</span>
+      <span className="flex-1 truncate text-[13px] font-medium tracking-tight min-w-0">
+        {name.length > 20 ? `${name.slice(0, 17)}...` : name}
+      </span>
       
-      <div className="flex items-center gap-1">
+      <div className="flex items-center gap-1 shrink-0">
         <button
           onClick={onSettings}
           className="p-1 opacity-0 group-hover:opacity-100 text-zinc-700 hover:text-zinc-400 transition-all cursor-pointer"
@@ -246,22 +248,23 @@ function SidebarContent({ inHoverPanel = false, onToggle }: { inHoverPanel?: boo
       <div className="h-14 flex items-center justify-between px-4 border-b border-white/[0.04]">
         <Link to="/dashboard" className="flex items-center gap-3 group">
           <div className="h-8 w-8 rounded-lg border border-white/[0.08] flex items-center justify-center transition-all group-hover:border-zinc-500/50 group-hover:shadow-[0_0_20px_rgba(255,255,255,0.02)] relative overflow-hidden">
-            <div className="absolute inset-0 bg-gradient-to-br from-white/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-            <Hash className="h-4 w-4 text-zinc-400 stroke-[2.5px] relative z-10 transition-colors group-hover:text-white" />
+            <img src="/logo.png" alt="Qualive Logo" className="w-6 h-6 object-contain transition-transform duration-200 group-hover:scale-110" />
           </div>
           <div className="flex flex-col">
             <span className="text-[14px] font-black text-white tracking-tight leading-none uppercase">QUALIVE</span>
           </div>
         </Link>
-        {!inHoverPanel && (
-          <button 
-            onClick={onToggle} 
-            className="text-zinc-700 hover:text-zinc-400 p-1.5 rounded-md hover:bg-white/[0.03] transition-all cursor-pointer group"
-            title="Close sidebar"
-          >
+        <button 
+          onClick={onToggle} 
+          className="text-zinc-700 hover:text-zinc-400 p-1.5 rounded-md hover:bg-white/[0.03] transition-all cursor-pointer group"
+          title={inHoverPanel ? "Pin sidebar" : "Close sidebar"}
+        >
+          {inHoverPanel ? (
+            <Pin className="h-4 w-4 transition-transform group-hover:scale-110" />
+          ) : (
             <PanelLeftClose className="h-4 w-4 transition-transform group-hover:-translate-x-0.5" />
-          </button>
-        )}
+          )}
+        </button>
       </div>
 
       {/* Primary Actions: Navigation & Search */}
@@ -405,43 +408,72 @@ function SidebarContent({ inHoverPanel = false, onToggle }: { inHoverPanel?: boo
 
 export function AppSidebar({ isOpen, onToggle }: AppSidebarProps) {
   const [showHoverPanel, setShowHoverPanel] = useState(false)
+  const [isPinning, setIsPinning] = useState(false)
 
+  // We no longer use useEffect to reset isPinning, to avoid race conditions during unmount
+  
   return (
     <>
-      {isOpen && (
-        <aside className="relative flex w-64 shrink-0 flex-col border-r border-white/[0.05] bg-[#131313] shadow-[1px_0_0_0_rgba(0,0,0,0.5)]">
-          <SidebarContent onToggle={onToggle} />
-        </aside>
-      )}
+      <AnimatePresence initial={false}>
+        {isOpen && (
+          <motion.aside 
+            initial={isPinning ? { width: 256, opacity: 1 } : { width: 0, opacity: 0 }}
+            animate={{ width: 256, opacity: 1 }}
+            exit={{ width: 0, opacity: 0 }}
+            transition={isPinning ? { duration: 0 } : { duration: 0.2, ease: "easeInOut" }}
+            className="relative flex shrink-0 flex-col border-r border-white/[0.05] bg-[#131313] shadow-[1px_0_0_0_rgba(0,0,0,0.5)] overflow-hidden"
+          >
+            <div className="w-64 h-full flex flex-col">
+              <SidebarContent onToggle={onToggle} />
+            </div>
+          </motion.aside>
+        )}
+      </AnimatePresence>
 
       {!isOpen && (
         <div
           className="fixed left-0 top-0 z-50 h-full w-2 transition-colors hover:bg-white/[0.03] cursor-pointer"
-          onMouseEnter={() => setShowHoverPanel(true)}
+          onMouseEnter={() => {
+            setIsPinning(false)
+            setShowHoverPanel(true)
+          }}
         />
       )}
 
-      {!isOpen && showHoverPanel && (
-        <>
-          <motion.div 
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-40 bg-black/60 backdrop-blur-[2px]" 
-            onMouseEnter={() => setShowHoverPanel(false)} 
-          />
-          <motion.aside
-            initial={{ x: -260 }}
-            animate={{ x: 0 }}
-            exit={{ x: -260 }}
-            transition={{ type: "spring", damping: 25, stiffness: 200 }}
-            className="fixed left-0 top-0 z-50 flex h-full w-64 shrink-0 flex-col border-r border-white/[0.08] bg-[#131313] shadow-[10px_0_50px_rgba(0,0,0,0.8)]"
-            onMouseLeave={() => setShowHoverPanel(false)}
-          >
-            <SidebarContent inHoverPanel onToggle={onToggle} />
-          </motion.aside>
-        </>
-      )}
+      <AnimatePresence>
+        {!isOpen && showHoverPanel && (
+          <>
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 z-40 bg-black/30" 
+              onMouseEnter={() => {
+                setIsPinning(false)
+                setShowHoverPanel(false)
+              }} 
+            />
+            <motion.aside
+              initial={{ x: -260 }}
+              animate={{ x: 0 }}
+              exit={isPinning ? { opacity: 0, transition: { duration: 0 } } : { x: -260, transition: { duration: 0.2, ease: "easeInOut" } }}
+              transition={{ type: "spring", damping: 30, stiffness: 300 }}
+              className="fixed left-0 top-0 z-50 flex h-full w-64 shrink-0 flex-col border-r border-white/[0.08] bg-[#131313] shadow-[10px_0_50px_rgba(0,0,0,0.8)]"
+              onMouseLeave={() => {
+                if (!isPinning) setShowHoverPanel(false)
+              }}
+            >
+              <SidebarContent 
+                inHoverPanel 
+                onToggle={() => {
+                  setIsPinning(true)
+                  onToggle()
+                }} 
+              />
+            </motion.aside>
+          </>
+        )}
+      </AnimatePresence>
     </>
   )
 }

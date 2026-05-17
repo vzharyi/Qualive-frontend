@@ -36,7 +36,10 @@ export function useCreateProject() {
 
     return useMutation({
         mutationFn: (data: CreateProjectDto) => projectsApi.createProject(data),
-        onSuccess: () => {
+        onSuccess: (newProject) => {
+            queryClient.setQueryData(projectKeys.all, (oldData: any) => {
+                return oldData ? [...oldData, newProject] : [newProject]
+            })
             queryClient.invalidateQueries({ queryKey: projectKeys.all })
         },
     })

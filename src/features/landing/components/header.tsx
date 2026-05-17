@@ -76,16 +76,14 @@ export function Header() {
             animate={{ y: 0, opacity: 1 }}
             transition={{ duration: 0.6, ease: "easeOut" }}
             className={`fixed top-0 left-0 right-0 z-50 transition-all duration-500 ${scrolled
-                ? "bg-[#0a0a10]/90 backdrop-blur-xl border-b border-white/[0.08] shadow-lg shadow-black/20"
+                ? "bg-[#131313]/90 backdrop-blur-xl border-b border-white/[0.08] shadow-lg shadow-black/20"
                 : "bg-transparent border-b border-transparent"
                 }`}
         >
             <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
                 {/* Logo — smooth scroll to top */}
                 <a href="/" onClick={scrollToTop} className="flex items-center gap-2 group cursor-pointer">
-                    <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-emerald-400 to-emerald-600 flex items-center justify-center text-black font-bold text-sm group-hover:scale-110 transition-transform duration-200">
-                        Q
-                    </div>
+                    <img src="/logo.png" alt="Qualive Logo" className="w-7 h-7 object-contain group-hover:scale-110 transition-transform duration-200" />
                     <span className="text-white font-semibold text-lg tracking-tight group-hover:text-zinc-200 transition-colors duration-200">
                         Qualive
                     </span>
@@ -102,7 +100,7 @@ export function Header() {
                         >
                             {item.label}
                             {/* Active indicator */}
-                            <span className={`absolute -bottom-0.5 left-0 right-0 h-px bg-emerald-400 transition-all duration-300 ${activeId === item.id ? "opacity-100 scale-x-100" : "opacity-0 scale-x-0"
+                            <span className={`absolute -bottom-0.5 left-0 right-0 h-px bg-amber-500 transition-all duration-300 ${activeId === item.id ? "opacity-100 scale-x-100" : "opacity-0 scale-x-0"
                                 }`} />
                         </button>
                     ))}
@@ -118,7 +116,7 @@ export function Header() {
                     </Link>
                     <Link
                         to="/register"
-                        className="text-sm px-4 py-2 bg-white text-black rounded-lg font-medium hover:bg-zinc-200 transition-all duration-200 hover:scale-105 active:scale-95"
+                        className="text-sm px-4 py-2 bg-white/[0.08] text-zinc-200 border border-white/[0.05] rounded-lg font-medium hover:bg-white/[0.12] hover:text-white transition-all duration-200 hover:scale-105 active:scale-95"
                     >
                         Get Started
                     </Link>

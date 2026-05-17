@@ -395,8 +395,8 @@ function TaskRow({ task, onOpenPanel }: { task: Task, onOpenPanel: (task: Task) 
   })()
 
   const assigneeName = task.assignee
-    ? task.assignee.firstName && task.assignee.lastName
-      ? `${task.assignee.firstName} ${task.assignee.lastName}`
+    ? task.assignee.firstName || task.assignee.lastName
+      ? `${task.assignee.firstName || ""} ${task.assignee.lastName || ""}`.trim()
       : task.assignee.login
     : null
 

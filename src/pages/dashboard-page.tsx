@@ -186,7 +186,7 @@ export default function DashboardPage() {
                                                             </Avatar>
                                                             <div>
                                                                 <h3 className="text-[15px] font-semibold text-zinc-200 group-hover/card:text-white transition-colors line-clamp-1">
-                                                                    {project.name}
+                                                                    {project.name.length > 20 ? `${project.name.slice(0, 20)}...` : project.name}
                                                                 </h3>
                                                                 <p className="text-[12px] text-zinc-500 mt-0.5">
                                                                     Created by <span className="text-zinc-400">{project.owner?.firstName || project.owner?.login || 'Unknown'}</span>
