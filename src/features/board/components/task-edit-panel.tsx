@@ -63,7 +63,7 @@ export function TaskEditPanel({
     const [showComments, setShowComments] = useState(false)
     const [isCalendarOpen, setIsCalendarOpen] = useState(false)
     const updateTask = useUpdateTask()
-    const { data: githubItems } = useTaskGithubItems(task?.id ?? 0)
+    const { data: githubItems } = useTaskGithubItems(task?.id ?? 0) as any
     const { data: comments = [] } = useTaskComments(task?.id ?? 0)
 
     const displayScore = (() => {
@@ -72,10 +72,10 @@ export function TaskEditPanel({
         if (task.codeScore !== null && task.codeScore !== undefined) return task.codeScore
 
         if (githubItems && githubItems.length > 0) {
-            const itemsWithScore = githubItems.filter(item => item.codeScore !== null)
+            const itemsWithScore = githubItems.filter((item: any) => item.codeScore !== null)
             if (itemsWithScore.length === 0) return null
             
-            const total = itemsWithScore.reduce((sum, item) => sum + (item.codeScore || 0), 0)
+            const total = itemsWithScore.reduce((sum: number, item: any) => sum + (item.codeScore || 0), 0)
             return Math.round(total / itemsWithScore.length)
         }
 
@@ -159,7 +159,7 @@ export function TaskEditPanel({
     const handleColumnChange = (v: string) => { setColumnId(Number(v)); markChanged() }
     const handlePriorityChange = (v: string) => { setPriority(v); markChanged() }
     const handleAssigneeChange = (v: string) => { setAssigneeId(v ? Number(v) : ''); markChanged() }
-    const handleCommitChange = (v: string) => { setGithubCommitHash(v); markChanged() }
+
 
     // Get current column for styled chip
     const currentColumn = columns.find(c => c.id === columnId)

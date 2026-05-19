@@ -3,10 +3,9 @@ import type React from "react"
 import { useState, useRef, useEffect } from "react"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { cn } from "@/lib/utils"
-import { Pencil, ExternalLink, Trash2, CalendarDays } from "lucide-react"
+import { Pencil, CalendarDays } from "lucide-react"
 import type { Task } from "@/features/tasks/types/tasks.types"
 import { useTaskGithubItems } from "@/features/tasks/api/github-items.queries"
-import { useDeleteTask } from "@/features/tasks/api/tasks.queries"
 
 declare global {
   interface Window {

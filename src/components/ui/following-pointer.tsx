@@ -16,7 +16,7 @@ export const FollowerPointerCard = ({
   const x = useMotionValue(0)
   const y = useMotionValue(0)
   const ref = React.useRef<HTMLDivElement>(null)
-  const [rect, setRect] = useState<DOMRect | null>(null)
+  const [, setRect] = useState<DOMRect | null>(null)
   const [isInside, setIsInside] = useState<boolean>(false)
 
   useEffect(() => {

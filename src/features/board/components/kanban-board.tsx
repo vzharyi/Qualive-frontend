@@ -385,10 +385,10 @@ function TaskRow({ task, onOpenPanel }: { task: Task, onOpenPanel: (task: Task) 
   const displayScore = (() => {
     if (task.qualityScore !== null && task.qualityScore !== undefined) return task.qualityScore
     if (task.codeScore !== null && task.codeScore !== undefined) return task.codeScore
-    if (githubItems && githubItems.length > 0) {
-      const itemsWithScore = githubItems.filter(item => item.codeScore !== null)
+    if (githubItems && (githubItems as any).length > 0) {
+      const itemsWithScore = (githubItems as any).filter((item: any) => item.codeScore !== null)
       if (itemsWithScore.length === 0) return null
-      const total = itemsWithScore.reduce((sum, item) => sum + (item.codeScore || 0), 0)
+      const total = itemsWithScore.reduce((sum: number, item: any) => sum + (item.codeScore || 0), 0)
       return Math.round(total / itemsWithScore.length)
     }
     return null
